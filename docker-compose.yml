@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: linkareer-db
+    restart: always
+    environment:
+      POSTGRES_USER: linkareer
+      POSTGRES_PASSWORD: linkareer123
+      POSTGRES_DB: linkareer_community
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

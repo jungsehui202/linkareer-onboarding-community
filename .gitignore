@@ -1,0 +1,32 @@
+node_modules
+
+/generated/prisma
+
+# .gitignore
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+
+# 데이터베이스
+*.db
+*.sqlite
+
+# 로그
+logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# 테스트
+coverage
+.nyc_output
