@@ -1,18 +1,47 @@
-version: '3.8'
+# ========================================
+# 링커리어 온보딩 과제 - Docker Compose
+# ========================================
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: linkareer-db
+  # PostgreSQL (링커리어 커뮤니티 DB)
+  postgres-community:
+    image: postgres:14.3
+    container_name: postgres_community_onboarding
     restart: always
     environment:
-      POSTGRES_USER: linkareer
-      POSTGRES_PASSWORD: linkareer123
       POSTGRES_DB: linkareer_community
+      POSTGRES_USER: linkareer
+      POSTGRES_PASSWORD: 1234
     ports:
-      - "5432:5432"
+      - "5436:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres_data:/var/lib/postgresql/data
+      - ./docker/scripts/init-community-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - linkareer
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkareer -d linkareer_community"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-volumes:
-  postgres_data:
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis_onboarding
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/redis_data:/data
+    networks:
+      - linkareer
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  linkareer:
+    external: true
