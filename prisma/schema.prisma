@@ -93,6 +93,7 @@ model Post {
 
   scraps Scrap[]
 
+  @@index([title])
   @@index([authorId])
   @@index([boardId])
   @@index([viewCount])
