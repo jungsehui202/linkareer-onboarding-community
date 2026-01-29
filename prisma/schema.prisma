@@ -51,3 +51,11 @@ enum UserRole {
   USER
   ADMIN
 }
+
+model Board {
+  id Int @id @default(autoincrement())
+  name String
+  slug String @unique
+
+  @@map("boards")
+}
