@@ -13,3 +13,41 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+
+// 컬럼명 변경
+// createdAt DateTime @default(now()) @map("created_at")
+
+// 테이블명 변경
+// @@map("users")
+
+// @@index([viewCount, createdAt])  // 복합 인덱스 (정렬 쿼리 최적화)
+
+// // 1:N 관계
+// author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+// Self-referencing (계층 구조)
+// parent Board? @relation("BoardHierarchy", fields: [parentId], references: [id])
+// children Board[] @relation("BoardHierarchy")
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(USER)
+  
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isDeleted])
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
