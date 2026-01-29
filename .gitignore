@@ -1,63 +1,38 @@
-node_modules
+# Node.js
+node_modules/
 
-/generated/prisma
+# Build & Generated
+dist/
+generated/
 
-# .gitignore
-node_modules
-dist
+# Environment Variables
 .env
 .env.local
 .env.*.local
 
-# 데이터베이스
-*.db
-*.sqlite
-
-# 로그
-logs
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.idea
-.vscode
-*.swp
-*.swo
-
-# 테스트
-coverage
-.nyc_output
-
-# Docker 데이터
+# Docker Volumes (Data Persistence)
 docker/postgres_data/
 docker/redis_data/
 docker/mysql_data/
 
-# 환경변수
-.env
-.env.local
-.env.*.local
+# Database
+*.db
+*.sqlite
 
-# 로그
+# Logs
 logs/
 *.log
 
-# 기타
-.DS_Store
-*.swp
-*.swo
+# Testing
+coverage/
+.nyc_output/
 
 # IDE
 .idea/
 .vscode/
+*.swp
+*.swo
 
-# Docker 데이터
-docker/postgres_data/
-docker/redis_data/
-
-# Docker 데이터
-docker/postgres_data/
-docker/redis_data/
+# OS
+.DS_Store
+Thumbs.db
