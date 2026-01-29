@@ -42,6 +42,9 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  posts  Post[]
+  scraps Scrap[]
+
   @@index([isDeleted])
   @@map("users")
 }
@@ -52,15 +55,67 @@ enum UserRole {
 }
 
 model Board {
-  id   Int    @id @default(autoincrement())
-  name String
-  slug String @unique
-  
-  parentId Int?   @map("parent_id")
-  parent   Board? @relation("BoardHierarchy", fields: [parentId], references: [id])
+  id          Int     @id @default(autoincrement())
+  name        String
+  slug        String  @unique
+  description String?
+
+  parentId Int?    @map("parent_id")
+  parent   Board?  @relation("BoardHierarchy", fields: [parentId], references: [id])
   children Board[] @relation("BoardHierarchy")
-  
+
   requiredRole UserRole @default(USER) @map("required_role")
-  
+
+  posts Post[]
+
+  @@index([parentId])
+  @@index([slug])
+  @@index([requiredRole])
   @@map("boards")
+}
+
+model Post {
+  id      Int    @id @default(autoincrement())
+  title   String
+  content String @db.Text
+
+  viewCount  Int @default(0) @map("view_count")
+  scrapCount Int @default(0) @map("scrap_count")
+
+  authorId Int?  @map("author_id")
+  author   User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  boardId Int   @map("board_id")
+  board   Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  scraps Scrap[]
+
+  @@index([authorId])
+  @@index([boardId])
+  @@index([viewCount])
+  @@index([scrapCount])
+  @@index([createdAt])
+  @@index([viewCount, createdAt])
+  @@index([viewCount, scrapCount])
+  @@map("posts")
+}
+
+model Scrap {
+  id Int @id @default(autoincrement())
+
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  postId Int  @map("post_id")
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, postId]) // 제약조건 (중복 스크랩 방지)
+  @@index([userId])
+  @@index([postId])
+  @@map("scraps")
 }
