@@ -64,3 +64,14 @@ yarn-error.log*
 *.db
 .cache/
 .turbo/
+
+# ========================================
+# Docker 데이터 볼륨 (절대 커밋하지 마세요!)
+# ========================================
+docker/postgres_data/
+docker/redis_data/
+docker/mysql_data/
+
+# Docker 관련 임시 파일
+*.log
+*.pid
