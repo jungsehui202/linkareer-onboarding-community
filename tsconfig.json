@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    // ========================================
+    // 🎯 기존 설정 (그대로 유지)
+    // ========================================
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
@@ -10,12 +13,37 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+
+    // ========================================
+    // 🚀 성능 최적화 (이미 있음 - 확인용)
+    // ========================================
     "incremental": true,
     "skipLibCheck": true,
+
+    // ========================================
+    // 🔧 타입 검사 설정 (이미 있음 - 확인용)
+    // ========================================
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "noFallthroughCasesInSwitch": false,
+    "esModuleInterop": true,
+
+    // ========================================
+    // 📁 경로 별칭 (선택사항 - 추가 권장)
+    // ========================================
+    "paths": {
+      "@/*": ["src/*"],
+      "@config/*": ["src/config/*"],
+      "@modules/*": ["src/modules/*"],
+      "@common/*": ["src/common/*"]
+    }
+  },
+
+  // ========================================
+  // 📂 포함/제외 설정 (추가 권장)
+  // ========================================
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }
