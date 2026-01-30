@@ -1,38 +1,131 @@
-# Node.js
+# ============================================================
+# .gitignore - 링커리어 온보딩 프로젝트
+# NestJS + Docker + PostgreSQL + Redis
+# ============================================================
+
+# ========================================
+# 🐳 Docker 데이터 볼륨 (절대 커밋 금지!)
+# ========================================
+docker/postgres_data/
+docker/mysql_data/
+docker/redis_data/
+docker/mongodb_data/
+docker/elasticsearch_data/
+
+# ========================================
+# 📦 Node.js
+# ========================================
 node_modules/
-
-# Build & Generated
 dist/
-generated/
+build/
+.next/
+coverage/
+out/
 
-# Environment Variables
+# 로그 파일
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ========================================
+# 🔐 환경 변수 (민감 정보)
+# ========================================
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.*.local
+*.pem
+*.key
 
-# Docker Volumes (Data Persistence)
-docker/postgres_data/
-docker/redis_data/
-docker/mysql_data/
+# ========================================
+# 💻 VS Code 개인 설정
+# ========================================
+.vscode/settings.json
+.vscode/*.code-workspace
 
-# Database
-*.db
-*.sqlite
+# 팀과 공유할 .vscode 파일들 (Git에 포함):
+# .vscode/launch.json
+# .vscode/tasks.json
+# .vscode/extensions.json
 
-# Logs
-logs/
-*.log
+# ========================================
+# 🖥️ OS 관련
+# ========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
 
-# Testing
-coverage/
-.nyc_output/
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
 
-# IDE
+# Linux
+*~
+.directory
+.Trash-*
+
+# ========================================
+# 🛠️ IDE
+# ========================================
+# IntelliJ IDEA
 .idea/
-.vscode/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Vim
 *.swp
 *.swo
+*.swn
+[._]*.s[a-v][a-z]
+[._]s[a-v][a-z]
 
-# OS
-.DS_Store
-Thumbs.db
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+
+# ========================================
+# 🗄️ 데이터베이스 & 캐시
+# ========================================
+*.sqlite
+*.sqlite3
+*.db
+.cache/
+.turbo/
+.eslintcache
+.tsbuildinfo
+
+# ========================================
+# 🧪 테스트 & 커버리지
+# ========================================
+coverage/
+.nyc_output/
+*.lcov
+
+# ========================================
+# 📱 프로덕션 빌드
+# ========================================
+.vercel
+.netlify
+
+# ========================================
+# 🔧 기타
+# ========================================
+*.pid
+*.seed
+*.pid.lock
+.npm
+lib-cov
