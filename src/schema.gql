@@ -1,0 +1,30 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Query {
+  """사용자 상세 조회"""
+  user(id: Int!): UserResponse
+
+  """활성 사용자 목록"""
+  users: [UserResponse!]!
+}
+
+type UserResponse {
+  createdAt: DateTime!
+  email: String!
+  id: Int!
+  name: String!
+  role: UserRole!
+}
+
+"""사용자 권한"""
+enum UserRole {
+  ADMIN
+  USER
+}
