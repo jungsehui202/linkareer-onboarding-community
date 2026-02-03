@@ -2,17 +2,60 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type BoardResponse {
+  createdAt: DateTime!
+  description: String
+  id: Int!
+  name: String!
+  parentId: Int
+  requiredRole: UserRole!
+  slug: String!
+  updatedAt: DateTime!
+}
+
+input CreateUserRequest {
+  email: String!
+  name: String!
+  password: String!
+  userRole: UserRole! = USER
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
 
+type Mutation {
+  """사용자 생성"""
+  createUser(input: CreateUserRequest!): UserResponse!
+
+  """사용자 수정"""
+  updateUser(input: UpdateUserRequest!): UserResponse!
+}
+
 type Query {
+  """게시판 상세 조회"""
+  board(id: Int!): BoardResponse!
+
+  """Slug로 게시판 조회"""
+  boardBySlug(slug: String!): BoardResponse
+
+  """게시판 목록 (권한별 필터링)"""
+  boards(userRole: UserRole! = USER): [BoardResponse!]!
+
+  """하위 게시판 목록"""
+  childBoards(parentId: Int!): [BoardResponse!]!
+
   """사용자 상세 조회"""
-  user(id: Int!): UserResponse
+  user(id: Int!): UserResponse!
 
   """활성 사용자 목록"""
   users: [UserResponse!]!
+}
+
+input UpdateUserRequest {
+  id: Int!
+  name: String
 }
 
 type UserResponse {
@@ -20,7 +63,7 @@ type UserResponse {
   email: String!
   id: Int!
   name: String!
-  role: UserRole!
+  userRole: UserRole!
 }
 
 """사용자 권한"""
