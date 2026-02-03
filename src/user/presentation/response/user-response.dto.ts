@@ -1,6 +1,5 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { User } from '@prisma/client';
-import { UserRole } from '../../domain/user.entity';
+import { UserEntity, UserRole } from '../../domain/user.entity';
 
 @ObjectType()
 export class UserResponse {
@@ -14,22 +13,22 @@ export class UserResponse {
   name: string;
 
   @Field(() => UserRole)
-  role: UserRole;
+  userRole: UserRole;
 
   @Field()
   createdAt: Date;
 
-  static from(user: User): UserResponse {
+  static from(user: UserEntity): UserResponse {
     const response = new UserResponse();
     response.id = user.id;
     response.email = user.email;
     response.name = user.name;
-    response.role = user.role as UserRole;
+    response.userRole = user.userRole;
     response.createdAt = user.createdAt;
     return response;
   }
 
-  static fromUsers(users: User[]): UserResponse[] {
+  static fromList(users: UserEntity[]): UserResponse[] {
     return users.map((user) => UserResponse.from(user));
   }
 }

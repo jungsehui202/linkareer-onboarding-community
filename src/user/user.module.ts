@@ -1,16 +1,12 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { UserService } from './application/user.service';
-import { UserRepository } from './domain/user.repository';
+import { UserPrisma } from './domain/user.prisma';
 import { UserResolver } from './presentation/user.resolver';
 
 @Module({
   imports: [PrismaModule],
-  providers: [
-    UserRepository, // Repository 등록
-    UserService,
-    UserResolver,
-  ],
-  exports: [UserService, UserRepository], // 다른 모듈에서 사용 가능
+  providers: [UserPrisma, UserService, UserResolver],
+  exports: [UserService, UserPrisma],
 })
 export class UserModule {}

@@ -1,23 +1,53 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '@prisma/client';
-import { UserRepository } from '../domain/user.repository';
+import { Password } from '../../common/vo/password.vo';
+import { UserEntity } from '../domain/user.entity';
+import { UserPrisma } from '../domain/user.prisma';
+import {
+  CreateUserRequest,
+  UpdateUserRequest,
+} from '../presentation/request/user-request.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(private readonly userPrisma: UserPrisma) {}
 
-  async findAllActiveUsers(): Promise<User[]> {
-    const allActiveUsers = this.userRepository.findAllActive();
-    return allActiveUsers; // raw 객체 그대로 반환
+  async createUser(request: CreateUserRequest): Promise<UserEntity> {
+    const hashedPassword = Password.fromPlainText(request.password).getValue();
+
+    const user = await this.userPrisma.create({
+      email: request.email,
+      password: hashedPassword,
+      name: request.name,
+      userRole: request.userRole,
+    });
+
+    return user;
   }
 
-  async findUserById(id: number): Promise<User> {
-    const user = this.userRepository.getById(id);
-    return user; // raw 객체 반환
+  async updateUser(
+    id: number,
+    request: UpdateUserRequest,
+  ): Promise<UserEntity> {
+    const user = await this.userPrisma.update(id, {
+      name: request.name,
+    });
+
+    return user;
   }
 
-  async findUserByEmail(email: string): Promise<User> {
-    const user = this.userRepository.findByEmail(email);
+  async findAllActiveUsers(): Promise<UserEntity[]> {
+    const users = await this.userPrisma.findAllActive();
+    return users;
+  }
+
+  async findUserById(id: number): Promise<UserEntity> {
+    const user = await this.userPrisma.findById(id);
+    return user;
+  }
+
+  async login(email: string, plainPassword: string): Promise<UserEntity> {
+    const user = await this.userPrisma.findByEmail(email);
+    user.login(plainPassword);
     return user;
   }
 }
