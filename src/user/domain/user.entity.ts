@@ -1,13 +1,15 @@
-import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { User as PrismaUser, UserRole } from '@prisma/client';
-import { Password } from '../../common/vo/password.vo';
-import { UserInvalidPasswordException } from '../exception/user.exception';
 
-// UserEntity (GraphQL + Domain)
-// Prisma User 타입과 호환
-// 도메인 로직 포함
+registerEnumType(UserRole, {
+  name: 'UserRole',
+  description: '사용자 권한',
+});
+
+export { UserRole };
+
 @ObjectType()
-export class UserEntity implements PrismaUser {
+export class User implements PrismaUser {
   @Field(() => Int)
   id: number;
 
@@ -26,28 +28,23 @@ export class UserEntity implements PrismaUser {
   @Field()
   updatedAt: Date;
 
-  // Prisma 필드 (GraphQL 노출 안 함)
+  // Prisma 필드 (GraphQL에 노출하지 않음)
   password: string;
   subscribeEmail: boolean;
   subscribeSMS: boolean;
   isDeleted: boolean;
   deletedAt: Date | null;
-
-  // Prisma User → UserEntity 변환
-  static fromPrisma(prismaUser: PrismaUser): UserEntity {
-    const entity = new UserEntity();
-    Object.assign(entity, prismaUser);
-    return entity;
-  }
-
-  // 로그인 검증 (도메인 로직)
-  login(plainPassword: string): void {
-    const passwordVO = Password.fromHashed(this.password);
-
-    if (!passwordVO.match(plainPassword)) {
-      throw new UserInvalidPasswordException();
-    }
-  }
 }
 
-export { UserRole };
+export const UserRoleUtils = {
+  getAllowedRoles(userRole: UserRole): UserRole[] {
+    if (userRole === UserRole.ADMIN) {
+      return [UserRole.USER, UserRole.ADMIN];
+    }
+    return [UserRole.USER];
+  },
+
+  isAdmin(role: UserRole): boolean {
+    return role === UserRole.ADMIN;
+  },
+};

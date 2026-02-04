@@ -1,9 +1,17 @@
-import { Field, InputType, Int } from '@nestjs/graphql';
-import { IsEmail, Matches, MaxLength, MinLength } from 'class-validator';
-import { UserRole } from '../../domain/user.entity';
+import { Field, InputType, Int, registerEnumType } from '@nestjs/graphql';
+import { UserRole } from '@prisma/client';
+import {
+  IsEmail,
+  IsNotEmpty,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+
+registerEnumType(UserRole, { name: 'UserRole' });
 
 @InputType()
-export class CreateUserRequest {
+export class CreateUserInput {
   @Field()
   @IsEmail({}, { message: '올바른 이메일 형식이 아닙니다.' })
   email: string;
@@ -19,7 +27,8 @@ export class CreateUserRequest {
   password: string;
 
   @Field()
-  @MinLength(1, { message: '이름을 입력해 주세요.' })
+  @IsNotEmpty({ message: '이름을 입력해 주세요.' })
+  @MinLength(1)
   @MaxLength(20, { message: '이름은 최대 20자까지 입력할 수 있습니다.' })
   name: string;
 
@@ -28,21 +37,23 @@ export class CreateUserRequest {
 }
 
 @InputType()
-export class UpdateUserRequest {
+export class UpdateUserInput {
   @Field(() => Int)
   id: number;
 
   @Field({ nullable: true })
+  @MinLength(1)
   @MaxLength(20)
   name?: string;
 }
 
 @InputType()
-export class LoginRequest {
+export class LoginInput {
   @Field()
   @IsEmail()
   email: string;
 
   @Field()
+  @IsNotEmpty()
   password: string;
 }

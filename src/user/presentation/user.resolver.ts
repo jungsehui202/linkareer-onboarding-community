@@ -1,62 +1,58 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UserService } from '../application/user.service';
-import { UserEntity } from '../domain/user.entity';
-import {
-  CreateUserRequest,
-  UpdateUserRequest,
-} from './request/user-request.dto';
-import { UserResponse } from './response/user-response.dto';
+import { User } from '../domain/user.entity';
+import { CreateUserInput, LoginInput, UpdateUserInput } from './dto/user.input';
 
-@Resolver(() => UserResponse)
+@Resolver(() => User)
 export class UserResolver {
   constructor(private readonly userService: UserService) {}
 
-  @Mutation(() => UserResponse, {
+  @Mutation(() => User, {
     name: 'createUser',
-    description: '사용자 생성',
+    description: '회원가입',
   })
-  async createUser(
-    @Args('input') request: CreateUserRequest,
-  ): Promise<UserResponse> {
-    const user: UserEntity = await this.userService.createUser(request);
-    const userResponse = UserResponse.from(user);
-    return userResponse;
+  async createUser(@Args('input') input: CreateUserInput): Promise<User> {
+    return this.userService.createUser(input);
   }
 
-  @Mutation(() => UserResponse, {
+  @Mutation(() => User, {
     name: 'updateUser',
-    description: '사용자 수정',
+    description: '사용자 정보 수정',
   })
-  async updateUser(
-    @Args('input') request: UpdateUserRequest,
-  ): Promise<UserResponse> {
-    const user: UserEntity = await this.userService.updateUser(
-      request.id,
-      request,
-    );
-    const userResponse = UserResponse.from(user);
-    return userResponse;
+  async updateUser(@Args('input') input: UpdateUserInput): Promise<User> {
+    return this.userService.updateUser(input.id, input);
   }
 
-  @Query(() => [UserResponse], {
+  @Mutation(() => User, {
+    name: 'login',
+    description: '로그인',
+  })
+  async login(@Args('input') input: LoginInput): Promise<User> {
+    return this.userService.login(input);
+  }
+
+  @Mutation(() => User, {
+    name: 'deleteUser',
+    description: '회원 탈퇴 (Soft Delete)',
+  })
+  async deleteUser(@Args('id', { type: () => Int }) id: number): Promise<User> {
+    return this.userService.deleteUser(id);
+  }
+
+  @Query(() => [User], {
     name: 'users',
     description: '활성 사용자 목록',
   })
-  async findAll(): Promise<UserResponse[]> {
-    const users: UserEntity[] = await this.userService.findAllActiveUsers();
-    const userResponses = UserResponse.fromList(users);
-    return userResponses;
+  async users(): Promise<User[]> {
+    return this.userService.findAllActive();
   }
 
-  @Query(() => UserResponse, {
+  @Query(() => User, {
     name: 'user',
-    description: '사용자 상세 조회',
+    description: '사용자 단건 조회',
+    nullable: false, // Non-nullable: 데이터 없으면 NotFoundException
   })
-  async findOne(
-    @Args('id', { type: () => Int }) id: number,
-  ): Promise<UserResponse> {
-    const user: UserEntity = await this.userService.findUserById(id);
-    const userResponse = UserResponse.from(user);
-    return userResponse;
+  async user(@Args('id', { type: () => Int }) id: number): Promise<User> {
+    return this.userService.findById(id);
   }
 }
