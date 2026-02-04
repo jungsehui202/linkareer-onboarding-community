@@ -12,7 +12,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // url      = env("DATABASE_URL")
 }
 
 // 컬럼명 변경
@@ -32,7 +32,7 @@ datasource db {
 
 model User {
   id       Int      @id @default(autoincrement())
-  email    String   @unique
+  email    String
   password String
   name     String
   userRole UserRole @default(USER)
@@ -49,6 +49,7 @@ model User {
   posts  Post[]
   scraps Scrap[]
 
+  @@index([email])
   @@index([isDeleted])
   @@map("users")
 }
