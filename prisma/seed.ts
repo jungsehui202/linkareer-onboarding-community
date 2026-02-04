@@ -16,44 +16,57 @@ async function main() {
   // 1. 사용자 생성
   console.log('\n📝 Creating users...');
 
-  const user1 = await prisma.user.upsert({
-    where: { email: 'user@example.com' },
-    update: {},
-    create: {
-      email: 'user@example.com',
-      password: hashPassword('password123'),
-      name: '일반 유저',
-      userRole: UserRole.USER,
-      subscribeEmail: true,
-      subscribeSMS: false,
-    },
+  // ✅ upsert 대신 findFirst + create 패턴 사용
+  const existingUser1 = await prisma.user.findFirst({
+    where: { email: 'user@example.com', isDeleted: false },
   });
 
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
-    update: {},
-    create: {
-      email: 'admin@example.com',
-      password: hashPassword('admin123'),
-      name: '관리자',
-      userRole: UserRole.ADMIN,
-      subscribeEmail: true,
-      subscribeSMS: true,
-    },
+  const user1 =
+    existingUser1 ||
+    (await prisma.user.create({
+      data: {
+        email: 'user@example.com',
+        password: hashPassword('password123'),
+        name: '일반 유저',
+        userRole: UserRole.USER,
+        subscribeEmail: true,
+        subscribeSMS: false,
+      },
+    }));
+
+  const existingAdmin = await prisma.user.findFirst({
+    where: { email: 'admin@example.com', isDeleted: false },
   });
 
-  const user2 = await prisma.user.upsert({
-    where: { email: 'user2@example.com' },
-    update: {},
-    create: {
-      email: 'user2@example.com',
-      password: hashPassword('password456'),
-      name: '김링커',
-      userRole: UserRole.USER,
-      subscribeEmail: false,
-      subscribeSMS: false,
-    },
+  const admin =
+    existingAdmin ||
+    (await prisma.user.create({
+      data: {
+        email: 'admin@example.com',
+        password: hashPassword('admin123'),
+        name: '관리자',
+        userRole: UserRole.ADMIN,
+        subscribeEmail: true,
+        subscribeSMS: true,
+      },
+    }));
+
+  const existingUser2 = await prisma.user.findFirst({
+    where: { email: 'user2@example.com', isDeleted: false },
   });
+
+  const user2 =
+    existingUser2 ||
+    (await prisma.user.create({
+      data: {
+        email: 'user2@example.com',
+        password: hashPassword('password456'),
+        name: '김링커',
+        userRole: UserRole.USER,
+        subscribeEmail: false,
+        subscribeSMS: false,
+      },
+    }));
 
   console.log('✅ Users created');
 
@@ -187,6 +200,7 @@ async function main() {
         scrapCount: 2,
       },
     ],
+    skipDuplicates: true,
   });
 
   console.log('✅ Posts created');
