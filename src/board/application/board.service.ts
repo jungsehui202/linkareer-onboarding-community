@@ -1,36 +1,68 @@
-import { Injectable } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
-import { UserRoleUtils } from '../../user/domain/user-role.utils';
-import { BoardEntity } from '../domain/board.entity';
-import { BoardPrisma } from '../domain/board.prisma';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { UserRoleUtils } from '../../user/domain/user.entity';
+import { Board } from '../domain/board.entity';
+import { BoardFilterInput } from '../presentation/dto/board.input';
 
 @Injectable()
 export class BoardService {
-  constructor(private readonly boardPrisma: BoardPrisma) {}
+  constructor(private prisma: PrismaService) {}
 
-  async findAllByUserRole(userRole: UserRole): Promise<BoardEntity[]> {
-    const allowedRoles = UserRoleUtils.getAllowedRoles(userRole);
-    const boards = await this.boardPrisma.findAllByUserRole(allowedRoles);
-    return boards;
+  async findMany(filter?: BoardFilterInput): Promise<Board[]> {
+    const where: Prisma.BoardWhereInput = {};
+
+    // 권한 필터링
+    if (filter?.userRole) {
+      const allowedRoles = UserRoleUtils.getAllowedRoles(filter.userRole);
+      where.requiredRole = { in: allowedRoles };
+    }
+
+    // 부모 게시판 필터링
+    if (filter?.parentId !== undefined) {
+      where.parentId = filter.parentId;
+    }
+
+    // Slug 필터링
+    if (filter?.slug) {
+      where.slug = filter.slug;
+    }
+
+    // 검색어 필터링
+    if (filter?.searchKeyword) {
+      where.OR = [
+        { name: { contains: filter.searchKeyword } },
+        { description: { contains: filter.searchKeyword } },
+      ];
+    }
+
+    return this.prisma.board.findMany({
+      where,
+      orderBy: { id: 'asc' },
+    });
   }
 
-  async findBoardById(id: number): Promise<BoardEntity> {
-    const board = await this.boardPrisma.findById(id);
+  async findById(id: number): Promise<Board> {
+    const board = await this.prisma.board.findUnique({
+      where: { id },
+    });
+
+    if (!board) {
+      throw new NotFoundException(`Board with ID ${id} not found`);
+    }
+
     return board;
   }
 
-  async findBoardBySlug(slug: string): Promise<BoardEntity | null> {
-    const board = await this.boardPrisma.findBySlug(slug);
+  async findBySlug(slug: string): Promise<Board> {
+    const board = await this.prisma.board.findUnique({
+      where: { slug },
+    });
+
+    if (!board) {
+      throw new NotFoundException(`Board with slug '${slug}' not found`);
+    }
+
     return board;
-  }
-
-  async findChildBoards(parentId: number): Promise<BoardEntity[]> {
-    const children = await this.boardPrisma.findChildren(parentId);
-    return children;
-  }
-
-  async findAllBoards(): Promise<BoardEntity[]> {
-    const boards = await this.boardPrisma.findAll();
-    return boards;
   }
 }

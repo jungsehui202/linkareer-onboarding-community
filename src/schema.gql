@@ -2,18 +2,40 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type BoardResponse {
+type Board {
+  """하위 게시판 목록"""
+  childBoards: [Board!]!
   createdAt: DateTime!
   description: String
   id: Int!
   name: String!
+
+  """부모 게시판"""
+  parentBoard: Board
   parentId: Int
+
+  """게시글 수"""
+  postCount: Int!
   requiredRole: UserRole!
   slug: String!
   updatedAt: DateTime!
 }
 
-input CreateUserRequest {
+input BoardFilterInput {
+  parentId: Int
+  searchKeyword: String
+  slug: String
+  userRole: UserRole
+}
+
+input CreatePostInput {
+  authorId: Int!
+  boardId: Int!
+  content: String!
+  title: String!
+}
+
+input CreateUserInput {
   email: String!
   name: String!
   password: String!
@@ -25,48 +47,111 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-type Mutation {
-  """사용자 생성"""
-  createUser(input: CreateUserRequest!): UserResponse!
+input LoginInput {
+  email: String!
+  password: String!
+}
 
-  """사용자 수정"""
-  updateUser(input: UpdateUserRequest!): UserResponse!
+type Mutation {
+  """게시글 작성"""
+  createPost(input: CreatePostInput!): Post!
+
+  """회원가입"""
+  createUser(input: CreateUserInput!): User!
+
+  """게시글 삭제"""
+  deletePost(id: Int!): Post!
+
+  """회원 탈퇴 (Soft Delete)"""
+  deleteUser(id: Int!): User!
+
+  """로그인"""
+  login(input: LoginInput!): User!
+
+  """게시글 수정"""
+  updatePost(input: UpdatePostInput!): Post!
+
+  """사용자 정보 수정"""
+  updateUser(input: UpdateUserInput!): User!
+}
+
+type Post {
+  """작성자 (탈퇴 시 null)"""
+  author: User
+  authorId: Int
+
+  """게시판"""
+  board: Board!
+  boardId: Int!
+
+  """댓글 수 (향후 구현)"""
+  commentCount: Int!
+  content: String!
+  createdAt: DateTime!
+  id: Int!
+
+  """현재 사용자가 스크랩했는지 여부"""
+  isScrapped: Boolean!
+  scrapCount: Int!
+  title: String!
+  updatedAt: DateTime!
+  viewCount: Int!
+}
+
+input PostFilterInput {
+  authorId: Int
+  boardId: Int
+  minScrapCount: Int
+  minViewCount: Int
+  searchKeyword: String
+  skip: Int = 0
+  take: Int = 20
 }
 
 type Query {
-  """게시판 상세 조회"""
-  board(id: Int!): BoardResponse!
+  """게시판 단건 조회 (ID)"""
+  board(id: Int!): Board!
 
-  """Slug로 게시판 조회"""
-  boardBySlug(slug: String!): BoardResponse
+  """게시판 단건 조회 (Slug)"""
+  boardBySlug(slug: String!): Board!
 
-  """게시판 목록 (권한별 필터링)"""
-  boards(userRole: UserRole! = USER): [BoardResponse!]!
+  """게시판 목록 (필터링)"""
+  boards(filter: BoardFilterInput): [Board!]!
 
-  """하위 게시판 목록"""
-  childBoards(parentId: Int!): [BoardResponse!]!
+  """게시글 상세 조회 (조회수 자동 증가)"""
+  post(id: Int!): Post!
 
-  """사용자 상세 조회"""
-  user(id: Int!): UserResponse!
+  """게시글 목록 (필터링 + 페이지네이션)"""
+  posts(filter: PostFilterInput): [Post!]!
+
+  """사용자 단건 조회"""
+  user(id: Int!): User!
 
   """활성 사용자 목록"""
-  users: [UserResponse!]!
+  users: [User!]!
 }
 
-input UpdateUserRequest {
+input UpdatePostInput {
+  boardId: Int
+  content: String
+  id: Int!
+  title: String
+}
+
+input UpdateUserInput {
   id: Int!
   name: String
 }
 
-type UserResponse {
+type User {
   createdAt: DateTime!
   email: String!
   id: Int!
   name: String!
+  updatedAt: DateTime!
   userRole: UserRole!
 }
 
-"""사용자 권한"""
 enum UserRole {
   ADMIN
   USER
