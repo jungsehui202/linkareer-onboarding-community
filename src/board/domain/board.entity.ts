@@ -1,10 +1,8 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { Board as PrismaBoard, UserRole } from '@prisma/client';
 
-// BoardEntity (GraphQL + Domain)
-// Prisma Board 타입과 호환
 @ObjectType()
-export class BoardEntity implements PrismaBoard {
+export class Board implements PrismaBoard {
   @Field(() => Int)
   id: number;
 
@@ -28,13 +26,4 @@ export class BoardEntity implements PrismaBoard {
 
   @Field()
   updatedAt: Date;
-
-  // Prisma Board → BoardEntity 변환
-  static fromPrisma(prismaBoard: PrismaBoard): BoardEntity {
-    const entity = new BoardEntity();
-    Object.assign(entity, prismaBoard);
-    return entity;
-  }
 }
-
-export { UserRole };

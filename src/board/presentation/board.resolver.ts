@@ -1,66 +1,79 @@
-import { Args, Int, Query, Resolver } from '@nestjs/graphql';
-import { UserRole } from '@prisma/client';
+import {
+  Args,
+  Int,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql';
+import { PrismaService } from '../../prisma/prisma.service';
 import { BoardService } from '../application/board.service';
-import { BoardEntity } from '../domain/board.entity';
-import { BoardResponse } from './response/board-response.dto';
+import { Board } from '../domain/board.entity';
+import { BoardFilterInput } from './dto/board.input';
 
-@Resolver(() => BoardResponse)
+@Resolver(() => Board)
 export class BoardResolver {
-  constructor(private readonly boardService: BoardService) {}
+  constructor(
+    private boardService: BoardService,
+    private prisma: PrismaService,
+  ) {}
 
-  @Query(() => [BoardResponse], {
+  @Query(() => [Board], {
     name: 'boards',
-    description: '게시판 목록 (권한별 필터링)',
+    description: '게시판 목록 (필터링)',
   })
-  async findAll(
-    @Args('userRole', { type: () => UserRole, defaultValue: UserRole.USER })
-    userRole: UserRole,
-  ): Promise<BoardResponse[]> {
-    const boards: BoardEntity[] =
-      await this.boardService.findAllByUserRole(userRole);
-    const boardResponses = BoardResponse.fromList(boards);
-    return boardResponses;
+  async boards(
+    @Args('filter', { nullable: true }) filter?: BoardFilterInput,
+  ): Promise<Board[]> {
+    return this.boardService.findMany(filter);
   }
 
-  @Query(() => BoardResponse, {
+  @Query(() => Board, {
     name: 'board',
-    description: '게시판 상세 조회',
+    description: '게시판 단건 조회 (ID)',
+    nullable: false, // 데이터 없으면 NotFoundException
   })
-  async findOne(
-    @Args('id', { type: () => Int }) id: number,
-  ): Promise<BoardResponse> {
-    const board: BoardEntity = await this.boardService.findBoardById(id);
-    const boardResponse = BoardResponse.from(board);
-    return boardResponse;
+  async board(@Args('id', { type: () => Int }) id: number): Promise<Board> {
+    return this.boardService.findById(id);
   }
 
-  @Query(() => BoardResponse, {
+  @Query(() => Board, {
     name: 'boardBySlug',
-    description: 'Slug로 게시판 조회',
-    nullable: true,
+    description: '게시판 단건 조회 (Slug)',
+    nullable: false,
   })
-  async findBySlug(@Args('slug') slug: string): Promise<BoardResponse | null> {
-    const board: BoardEntity | null =
-      await this.boardService.findBoardBySlug(slug);
-
-    if (!board) {
-      return null;
-    }
-
-    const boardResponse = BoardResponse.from(board);
-    return boardResponse;
+  async boardBySlug(@Args('slug') slug: string): Promise<Board> {
+    return this.boardService.findBySlug(slug);
   }
 
-  @Query(() => [BoardResponse], {
-    name: 'childBoards',
+  @ResolveField(() => Board, {
+    nullable: true,
+    description: '부모 게시판',
+  })
+  async parentBoard(@Parent() board: Board): Promise<Board | null> {
+    if (!board.parentId) return null;
+
+    return this.prisma.board.findUnique({
+      where: { id: board.parentId },
+    });
+  }
+
+  @ResolveField(() => [Board], {
     description: '하위 게시판 목록',
   })
-  async findChildren(
-    @Args('parentId', { type: () => Int }) parentId: number,
-  ): Promise<BoardResponse[]> {
-    const children: BoardEntity[] =
-      await this.boardService.findChildBoards(parentId);
-    const childResponses = BoardResponse.fromList(children);
-    return childResponses;
+  async childBoards(@Parent() board: Board): Promise<Board[]> {
+    return this.prisma.board.findMany({
+      where: { parentId: board.id },
+      orderBy: { id: 'asc' },
+    });
+  }
+
+  @ResolveField(() => Int, {
+    description: '게시글 수',
+  })
+  async postCount(@Parent() board: Board): Promise<number> {
+    return this.prisma.post.count({
+      where: { boardId: board.id },
+    });
   }
 }
