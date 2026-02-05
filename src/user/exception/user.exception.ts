@@ -1,14 +1,12 @@
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 
 export class UserNotFoundException extends NotFoundException {
-  constructor(id: number) {
-    super(`User ID: ${id} Not Found Exception !`);
-  }
-}
-
-export class UserEmailNotFoundException extends NotFoundException {
-  constructor(email: string) {
-    super(`User Email: ${email} Not Found Exception !`);
+  constructor(identifier: number | string) {
+    const message =
+      typeof identifier === 'number'
+        ? `User with ID ${identifier} not found`
+        : `User with email ${identifier} not found`;
+    super(message);
   }
 }
 
