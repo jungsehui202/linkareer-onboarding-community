@@ -1,9 +1,11 @@
-import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
+import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
+import { GraphQLContext } from '../../common/type/context.type';
 import { UserService } from '../application/user.service';
 import { User } from '../domain/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { CreateUserInput, LoginInput, UpdateUserInput } from './dto/user.input';
-import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 
 @Resolver(() => User)
 export class UserResolver {
@@ -76,11 +78,3 @@ export class UserResolver {
     return this.userService.findById(id);
   }
 }
-function UseGuards(GqlAuthGuard: any): (target: UserResolver, propertyKey: "me", descriptor: TypedPropertyDescriptor<(ctx: GraphQLContext) => Promise<User>>) => void | TypedPropertyDescriptor<...> {
-  throw new Error('Function not implemented.');
-}
-
-function Context(): (target: UserResolver, propertyKey: "me", parameterIndex: 0) => void {
-  throw new Error('Function not implemented.');
-}
-

@@ -58,6 +58,7 @@ export class PostService {
   }
 
   // 게시글 상세 조회 (조회수 자동 증가)
+  // TODO: 조회수 자동 증가 하면 안 되는 거로 수정하기 !!
   async findById(id: number): Promise<Post> {
     const post = await this.prisma.post.findUnique({
       where: { id },

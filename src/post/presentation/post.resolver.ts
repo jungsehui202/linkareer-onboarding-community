@@ -1,3 +1,4 @@
+import { UseGuards } from '@nestjs/common';
 import {
   Args,
   Context,
@@ -8,6 +9,7 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
+import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 import { Board } from '../../board/domain/board.entity';
 import { GraphQLContext } from '../../common/type/context.type';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -19,7 +21,6 @@ import {
   PostFilterInput,
   UpdatePostInput,
 } from './dto/post.input';
-import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 
 @Resolver(() => Post)
 export class PostResolver {
@@ -173,11 +174,3 @@ export class PostResolver {
     return 0;
   }
 }
-function UseGuards(GqlAuthGuard: any): (target: PostResolver, propertyKey: "createPost", descriptor: TypedPropertyDescriptor<(input: CreatePostInput, ctx: GraphQLContext) => Promise<Post>>) => void | TypedPropertyDescriptor<...> {
-  throw new Error('Function not implemented.');
-}
-
-function Context(): (target: PostResolver, propertyKey: "createPost", parameterIndex: 1) => void {
-  throw new Error('Function not implemented.');
-}
-

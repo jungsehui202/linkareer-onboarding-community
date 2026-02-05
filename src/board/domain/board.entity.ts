@@ -1,5 +1,6 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { Board as PrismaBoard, UserRole } from '@prisma/client';
+import { Board as PrismaBoard } from '@prisma/client';
+import { UserRole } from '../../user/domain/user.entity';
 
 @ObjectType()
 export class Board implements PrismaBoard {

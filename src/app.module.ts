@@ -43,14 +43,17 @@ import { UserModule } from './user/user.module';
           credentials: true,
         },
 
-        context: ({ req }) => ({
-          req,
-          user: req.user, // JwtStrategy의 validate()에서 주입됨
-          loaders: {
-            userLoader: createUserLoader(prisma),
-            boardLoader: createBoardLoader(prisma),
-          },
-        }),
+        context: ({ req }) => {
+          // 1. 여기서 prisma 서비스가 잘 전달되는지 확인
+          // 2. 반드시 { req, loaders } 형태의 '하나의 객체'를 리턴해야 함
+          return {
+            req,
+            loaders: {
+              userLoader: createUserLoader(prisma),
+              boardLoader: createBoardLoader(prisma),
+            },
+          };
+        },
       }),
     }),
 
