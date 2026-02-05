@@ -1,5 +1,6 @@
 import {
   Args,
+  Context,
   Int,
   Mutation,
   Parent,
@@ -8,6 +9,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { Board } from '../../board/domain/board.entity';
+import { GraphQLContext } from '../../common/type/context.type';
 import { PrismaService } from '../../prisma/prisma.service';
 import { User } from '../../user/domain/user.entity';
 import { PostService } from '../application/post.service';
@@ -68,25 +70,60 @@ export class PostResolver {
     return this.postService.delete(id);
   }
 
+  // 데이터로더 반영 안 된 메서드
+  // @ResolveField(() => User, {
+  //   nullable: true,
+  //   description: '작성자 (탈퇴 시 null)',
+  // })
+  // async author(@Parent() post: Post): Promise<User | null> {
+  //   if (!post.authorId) return null;
+
+  //   return this.prisma.user.findUnique({
+  //     where: { id: post.authorId },
+  //   });
+  // }
+
   @ResolveField(() => User, {
     nullable: true,
-    description: '작성자 (탈퇴 시 null)',
+    description: '작성자 (DataLoader 적용: N+1 해결)',
   })
-  async author(@Parent() post: Post): Promise<User | null> {
-    if (!post.authorId) return null;
+  async author(
+    @Parent() post: Post,
+    @Context() ctx: GraphQLContext,
+  ): Promise<User | null> {
+    console.log('Context check:', ctx);
+    console.log('Loaders check:', ctx?.loaders);
 
-    return this.prisma.user.findUnique({
-      where: { id: post.authorId },
-    });
+    if (!ctx.loaders) {
+      console.error('Loader가 Context에 주입되지 않았습니다 !!');
+      return null;
+    }
+
+    if (!post.authorId) {
+      return null;
+    }
+
+    return ctx.loaders.userLoader.load(post.authorId);
   }
 
+  // 데이터로더 반영 안 된 메서드
+  // @ResolveField(() => Board, {
+  //   description: '게시판',
+  // })
+  // async board(@Parent() post: Post): Promise<Board> {
+  //   return this.prisma.board.findUniqueOrThrow({
+  //     where: { id: post.boardId },
+  //   });
+  // }
+
   @ResolveField(() => Board, {
-    description: '게시판',
+    description: '게시판 (DataLoader 적용)',
   })
-  async board(@Parent() post: Post): Promise<Board> {
-    return this.prisma.board.findUniqueOrThrow({
-      where: { id: post.boardId },
-    });
+  async board(
+    @Parent() post: Post,
+    @Context() ctx: GraphQLContext,
+  ): Promise<Board | null> {
+    return ctx.loaders.boardLoader.load(post.boardId);
   }
 
   @ResolveField(() => Boolean, {

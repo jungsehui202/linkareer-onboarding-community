@@ -1,10 +1,6 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { GqlError } from '../../common/exception/gql-error.helper';
 import { PrismaService } from '../../prisma/prisma.service';
 import { User } from '../domain/user.entity';
 import {
@@ -27,7 +23,9 @@ export class UserService {
     });
 
     if (existingActive) {
-      throw new ConflictException('이미 사용 중인 이메일입니다.');
+      throw GqlError.conflict('Email already exists', {
+        email: input.email,
+      });
     }
 
     // 비밀번호 해싱
@@ -104,7 +102,9 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
+      throw GqlError.notFound('User not found', {
+        email: email,
+      });
     }
 
     return user;
@@ -117,7 +117,7 @@ export class UserService {
     // 비밀번호 검증
     const hashedPassword = this.hashPassword(input.password);
     if (user.password !== hashedPassword) {
-      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
+      throw GqlError.unauthorized('Invalid email or password');
     }
 
     return user;

@@ -76,11 +76,11 @@ type Mutation {
 }
 
 type Post {
-  """작성자 (탈퇴 시 null)"""
+  """작성자 (DataLoader 적용: N+1 해결)"""
   author: User
   authorId: Int
 
-  """게시판"""
+  """게시판 (DataLoader 적용)"""
   board: Board!
   boardId: Int!
 
