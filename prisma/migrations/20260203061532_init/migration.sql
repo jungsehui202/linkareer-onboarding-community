@@ -7,7 +7,9 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL DEFAULT 'USER',
+    "userRole" "UserRole" NOT NULL DEFAULT 'USER',
+    "subscribe_email" BOOLEAN NOT NULL DEFAULT false,
+    "subscribe_sms" BOOLEAN NOT NULL DEFAULT false,
     "is_deleted" BOOLEAN NOT NULL DEFAULT false,
     "deleted_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24,6 +26,8 @@ CREATE TABLE "boards" (
     "description" TEXT,
     "parent_id" INTEGER,
     "required_role" "UserRole" NOT NULL DEFAULT 'USER',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "boards_pkey" PRIMARY KEY ("id")
 );
