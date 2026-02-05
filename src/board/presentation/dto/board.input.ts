@@ -1,26 +1,33 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
 import { UserRole } from '@prisma/client';
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator'; // 추가
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 @InputType()
 export class BoardFilterInput {
   @Field(() => UserRole, { nullable: true })
-  @IsOptional() // 추가
-  @IsEnum(UserRole) // 추가 (Enum 검증)
+  @IsOptional()
+  @IsEnum(UserRole, { message: '올바른 사용자 권한이 아닙니다.' })
   userRole?: UserRole;
 
   @Field(() => Int, { nullable: true })
   @IsOptional()
-  @IsInt()
+  @IsInt({ message: '부모 게시판 ID는 정수여야 합니다.' })
   parentId?: number;
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsString()
+  @IsString({ message: 'slug는 문자열이어야 합니다.' })
   slug?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsString()
+  @IsString({ message: '검색어는 문자열이어야 합니다.' })
+  @MinLength(2, { message: '검색어는 최소 2자 이상이어야 합니다.' })
   searchKeyword?: string;
 }

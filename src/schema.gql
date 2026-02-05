@@ -105,7 +105,13 @@ input PostFilterInput {
   minViewCount: Int
   searchKeyword: String
   skip: Int = 0
+  sort: PostSortInput
   take: Int = 20
+}
+
+input PostSortInput {
+  createdAt: SortOrder = DESC
+  viewCount: SortOrder
 }
 
 type Query {
@@ -131,6 +137,12 @@ type Query {
   users: [User!]!
 }
 
+"""정렬 방향"""
+enum SortOrder {
+  ASC
+  DESC
+}
+
 input UpdatePostInput {
   boardId: Int
   content: String
@@ -152,6 +164,7 @@ type User {
   userRole: UserRole!
 }
 
+"""사용자 권한"""
 enum UserRole {
   ADMIN
   USER
