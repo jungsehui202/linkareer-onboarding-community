@@ -1,14 +1,14 @@
-import { Field, InputType, Int, registerEnumType } from '@nestjs/graphql';
+import { Field, InputType, Int, PartialType, PickType } from '@nestjs/graphql';
 import { UserRole } from '@prisma/client';
 import {
   IsEmail,
+  IsEnum,
+  IsInt,
   IsNotEmpty,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
-
-registerEnumType(UserRole, { name: 'UserRole' });
 
 @InputType()
 export class CreateUserInput {
@@ -33,27 +33,32 @@ export class CreateUserInput {
   name: string;
 
   @Field(() => UserRole, { defaultValue: UserRole.USER })
+  @IsEnum(UserRole, { message: '올바른 사용자 권한이 아닙니다.' })
   userRole: UserRole;
 }
 
+// UpdateUserInput
+//
+// PickType: CreateUserInput에서 'name'만 선택
+// PartialType: 선택된 필드를 모두 optional로 변경
+//
+// 결과: { name?: string } + { id: number }
 @InputType()
-export class UpdateUserInput {
+export class UpdateUserInput extends PartialType(
+  PickType(CreateUserInput, ['name'] as const),
+) {
   @Field(() => Int)
+  @IsInt()
   id: number;
-
-  @Field({ nullable: true })
-  @MinLength(1)
-  @MaxLength(20)
-  name?: string;
 }
 
 @InputType()
 export class LoginInput {
   @Field()
-  @IsEmail()
+  @IsEmail({}, { message: '올바른 이메일 형식이 아닙니다.' })
   email: string;
 
   @Field()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: '비밀번호를 입력해 주세요.' })
   password: string;
 }
