@@ -31,11 +31,12 @@ datasource db {
 // children Board[] @relation("BoardHierarchy")
 
 model User {
-  id       Int      @id @default(autoincrement())
-  email    String
-  password String
-  name     String
-  userRole UserRole @default(USER)
+  id           Int      @id @default(autoincrement())
+  email        String
+  password     String
+  name         String
+  userRole     UserRole @default(USER)
+  refreshToken String?  @db.Text
 
   subscribeEmail Boolean @default(false) @map("subscribe_email")
   subscribeSMS   Boolean @default(false) @map("subscribe_sms")
@@ -49,7 +50,6 @@ model User {
   posts  Post[]
   scraps Scrap[]
 
-  @@index([email])
   @@index([isDeleted])
   @@map("users")
 }

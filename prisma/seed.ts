@@ -1,13 +1,10 @@
 import { PrismaClient, UserRole } from '@prisma/client';
-import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-/**
- * 비밀번호 해싱
- */
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
 }
 
 async function main() {
@@ -26,7 +23,7 @@ async function main() {
     (await prisma.user.create({
       data: {
         email: 'user@example.com',
-        password: hashPassword('password123'),
+        password: await hashPassword('password123'),
         name: '일반 유저',
         userRole: UserRole.USER,
         subscribeEmail: true,
@@ -43,7 +40,7 @@ async function main() {
     (await prisma.user.create({
       data: {
         email: 'admin@example.com',
-        password: hashPassword('admin123'),
+        password: await hashPassword('admin123'),
         name: '관리자',
         userRole: UserRole.ADMIN,
         subscribeEmail: true,
@@ -60,7 +57,7 @@ async function main() {
     (await prisma.user.create({
       data: {
         email: 'user2@example.com',
-        password: hashPassword('password456'),
+        password: await hashPassword('password456'),
         name: '김링커',
         userRole: UserRole.USER,
         subscribeEmail: false,

@@ -29,7 +29,6 @@ input BoardFilterInput {
 }
 
 input CreatePostInput {
-  authorId: Int!
   boardId: Int!
   content: String!
   title: String!
