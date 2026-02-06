@@ -5,7 +5,6 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
-  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -17,22 +16,16 @@ export class CreateUserInput {
   email: string;
 
   @Field()
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,30}$/,
-    {
-      message:
-        '비밀번호는 8~30자의 영어 대소문자, 숫자, 특수문자를 포함해야 합니다.',
-    },
-  )
+  @MinLength(8, { message: '비밀번호는 최소 8자 이상이어야 합니다.' })
+  @MaxLength(30, { message: '비밀번호는 최대 30자까지 가능합니다.' })
   password: string;
 
   @Field()
   @IsNotEmpty({ message: '이름을 입력해 주세요.' })
-  @MinLength(1)
   @MaxLength(20, { message: '이름은 최대 20자까지 입력할 수 있습니다.' })
   name: string;
 
-  @Field(() => UserRole, { defaultValue: UserRole.USER })
+  @Field(() => UserRole)
   @IsEnum(UserRole, { message: '올바른 사용자 권한이 아닙니다.' })
   userRole: UserRole;
 }

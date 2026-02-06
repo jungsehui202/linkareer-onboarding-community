@@ -38,7 +38,7 @@ input CreateUserInput {
   email: String!
   name: String!
   password: String!
-  userRole: UserRole! = USER
+  userRole: UserRole!
 }
 
 """
