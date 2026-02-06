@@ -1,5 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { AuthService } from '../../auth/application/auth.service';
 import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 import { GraphQLContext } from '../../common/type/context.type';
 import { UserService } from '../application/user.service';
@@ -9,8 +10,10 @@ import { CreateUserInput, LoginInput, UpdateUserInput } from './dto/user.input';
 
 @Resolver(() => User)
 export class UserResolver {
-  authService: any;
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Mutation(() => User, {
     name: 'createUser',
@@ -64,7 +67,7 @@ export class UserResolver {
     name: 'me',
     description: '현재 로그인한 사용자 정보',
   })
-  @UseGuards(GqlAuthGuard) // ← JWT 검증
+  @UseGuards(GqlAuthGuard)
   async me(@Context() ctx: GraphQLContext): Promise<User> {
     return ctx.user!;
   }

@@ -6,6 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
 import {
   createBoardLoader,
   createChildBoardsLoader,
@@ -65,6 +66,7 @@ import { UserModule } from './user/user.module';
     UserModule,
     BoardModule,
     PostModule,
+    AuthModule,
   ],
 
   controllers: [AppController],

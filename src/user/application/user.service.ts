@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 import { GqlError } from '../../common/exception/gql-error.helper';
 import { PrismaService } from '../../prisma/prisma.service';
 import { User } from '../domain/user.entity';
@@ -18,7 +18,7 @@ export class UserService {
     const existingActive = await this.prisma.user.findFirst({
       where: {
         email: input.email,
-        isDeleted: false, // 활성 사용자만 체크
+        isDeleted: false,
       },
     });
 
@@ -28,33 +28,8 @@ export class UserService {
       });
     }
 
-    // 비밀번호 해싱
-    const hashedPassword = this.hashPassword(input.password);
+    const hashedPassword = await this.hashPassword(input.password);
 
-    // 탈퇴한 사용자가 재가입하는 경우
-    const deletedUser = await this.prisma.user.findFirst({
-      where: {
-        email: input.email,
-        isDeleted: true,
-      },
-    });
-
-    if (deletedUser) {
-      // 옵션 1: 기존 데이터 복구 (비권장 - GDPR 위반 가능)
-      // return this.prisma.user.update({
-      //   where: { id: deletedUser.id },
-      //   data: {
-      //     isDeleted: false,
-      //     deletedAt: null,
-      //     password: hashedPassword,
-      //     name: input.name,
-      //   },
-      // });
-      // 옵션 2: 신규 계정 생성 (권장)
-      // → Partial Index로 email 유니크 제약이 활성 사용자만 적용되므로 정상 동작
-    }
-
-    // 4. 신규 가입
     return this.prisma.user.create({
       data: {
         email: input.email,
@@ -111,12 +86,11 @@ export class UserService {
   }
 
   async login(input: LoginInput): Promise<User> {
-    // 이메일로 사용자 조회
     const user = await this.findByEmail(input.email);
 
-    // 비밀번호 검증
-    const hashedPassword = this.hashPassword(input.password);
-    if (user.password !== hashedPassword) {
+    const isMatch = await bcrypt.compare(input.password, user.password);
+
+    if (!isMatch) {
       throw GqlError.unauthorized('Invalid email or password');
     }
 
@@ -135,7 +109,7 @@ export class UserService {
     });
   }
 
-  private hashPassword(password: string): string {
-    return crypto.createHash('sha256').update(password).digest('hex');
+  private async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
   }
 }

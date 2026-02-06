@@ -12,7 +12,7 @@ import {
 export class PostService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(input: CreatePostInput): Promise<Post> {
+  async create(input: CreatePostInput & { authorId: number }) {
     return this.prisma.post.create({
       data: input,
     });

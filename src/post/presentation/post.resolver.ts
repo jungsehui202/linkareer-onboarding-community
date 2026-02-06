@@ -10,6 +10,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
+import { RolesGuard } from '../../auth/guard/roles.guard';
 import { Board } from '../../board/domain/board.entity';
 import { GqlError } from '../../common/exception/gql-error.helper';
 import { GraphQLContext } from '../../common/type/context.type';
@@ -114,7 +115,7 @@ export class PostResolver {
     name: 'deletePost',
     description: '게시글 삭제',
   })
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, RolesGuard)
   async deletePost(
     @Args('id', { type: () => Int }) id: number,
     @Context() ctx: GraphQLContext,
