@@ -1,22 +1,20 @@
 import {
   Args,
+  Context,
   Int,
   Parent,
   Query,
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { PrismaService } from '../../prisma/prisma.service';
+import { GraphQLContext } from '../../common/type/context.type';
 import { BoardService } from '../application/board.service';
 import { Board } from '../domain/board.entity';
 import { BoardFilterInput } from './dto/board.input';
 
 @Resolver(() => Board)
 export class BoardResolver {
-  constructor(
-    private boardService: BoardService,
-    private prisma: PrismaService,
-  ) {}
+  constructor(private readonly boardService: BoardService) {}
 
   @Query(() => [Board], {
     name: 'boards',
@@ -31,7 +29,7 @@ export class BoardResolver {
   @Query(() => Board, {
     name: 'board',
     description: '게시판 단건 조회 (ID)',
-    nullable: false, // 데이터 없으면 NotFoundException
+    nullable: false,
   })
   async board(@Args('id', { type: () => Int }) id: number): Promise<Board> {
     return this.boardService.findById(id);
@@ -50,30 +48,44 @@ export class BoardResolver {
     nullable: true,
     description: '부모 게시판',
   })
-  async parentBoard(@Parent() board: Board): Promise<Board | null> {
+  async parentBoard(
+    @Parent() board: Board,
+    @Context() ctx: GraphQLContext,
+  ): Promise<Board | null> {
     if (!board.parentId) return null;
 
-    return this.prisma.board.findUnique({
-      where: { id: board.parentId },
-    });
+    if (ctx.loaders?.boardLoader) {
+      return ctx.loaders.boardLoader.load(board.parentId);
+    }
+
+    return this.boardService.findParentBoard(board.parentId);
   }
 
   @ResolveField(() => [Board], {
     description: '하위 게시판 목록',
   })
-  async childBoards(@Parent() board: Board): Promise<Board[]> {
-    return this.prisma.board.findMany({
-      where: { parentId: board.id },
-      orderBy: { id: 'asc' },
-    });
+  async childBoards(
+    @Parent() board: Board,
+    @Context() ctx: GraphQLContext,
+  ): Promise<Board[]> {
+    if (ctx.loaders?.childBoardsLoader) {
+      return ctx.loaders.childBoardsLoader.load(board.id);
+    }
+
+    return this.boardService.findChildBoards(board.id);
   }
 
   @ResolveField(() => Int, {
     description: '게시글 수',
   })
-  async postCount(@Parent() board: Board): Promise<number> {
-    return this.prisma.post.count({
-      where: { boardId: board.id },
-    });
+  async postCount(
+    @Parent() board: Board,
+    @Context() ctx: GraphQLContext,
+  ): Promise<number> {
+    if (ctx.loaders?.postCountLoader) {
+      return ctx.loaders.postCountLoader.load(board.id);
+    }
+
+    return this.boardService.getPostCount(board.id);
   }
 }
