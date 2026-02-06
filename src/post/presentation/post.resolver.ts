@@ -17,6 +17,7 @@ import {
   PostFilterInput,
   UpdatePostInput,
 } from './dto/post.input';
+import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 
 @Resolver(() => Post)
 export class PostResolver {
@@ -44,12 +45,31 @@ export class PostResolver {
     return this.postService.findById(id);
   }
 
+  // JWT 반영 안 된 메서드
+  // @Mutation(() => Post, {
+  //   name: 'createPost',
+  //   description: '게시글 작성',
+  // })
+  // async createPost(@Args('input') input: CreatePostInput): Promise<Post> {
+  //   return this.postService.create(input);
+  // }
+
   @Mutation(() => Post, {
     name: 'createPost',
     description: '게시글 작성',
   })
-  async createPost(@Args('input') input: CreatePostInput): Promise<Post> {
-    return this.postService.create(input);
+  @UseGuards(GqlAuthGuard) // ← JWT 검증
+  async createPost(
+    @Args('input') input: CreatePostInput,
+    @Context() ctx: GraphQLContext,
+  ): Promise<Post> {
+    const authorId = ctx.user!.id;
+
+    // Service에 authorId 전달
+    return this.postService.create({
+      ...input,
+      authorId, // ← Context에서 가져온 값
+    });
   }
 
   @Mutation(() => Post, {
@@ -116,3 +136,11 @@ export class PostResolver {
     return 0;
   }
 }
+function UseGuards(GqlAuthGuard: any): (target: PostResolver, propertyKey: "createPost", descriptor: TypedPropertyDescriptor<(input: CreatePostInput, ctx: GraphQLContext) => Promise<Post>>) => void | TypedPropertyDescriptor<...> {
+  throw new Error('Function not implemented.');
+}
+
+function Context(): (target: PostResolver, propertyKey: "createPost", parameterIndex: 1) => void {
+  throw new Error('Function not implemented.');
+}
+

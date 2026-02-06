@@ -1,33 +1,39 @@
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_FILTER } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { createBoardLoader } from './board/application/board.dataloader';
 import { BoardModule } from './board/board.module';
+import { GlobalGqlExceptionFilter } from './common/filter/gql-exception.filter';
 import { PostModule } from './post/post.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PrismaService } from './prisma/prisma.service';
+import { createUserLoader } from './user/application/user.dataloader';
 import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
-    // ConfigModule: 환경변수 전역 사용
+    // 1. 환경변수 설정
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'local'}`,
     }),
 
-    // GraphQLModule: 환경별 동적 설정
+    // 2. GraphQL 설정 (Config + Prisma 동시에 사용)
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        // Schema 생성 (Code-first)
+      imports: [PrismaModule],
+      inject: [ConfigService, PrismaService],
+      useFactory: (config: ConfigService, prisma: PrismaService) => ({
+        // 스키마 설정
         autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
         sortSchema: true,
 
-        // 보안: 운영 환경에서 비활성화
+        // 운영 환경 보안 설정 (ConfigService 사용)
         playground: config.get('NODE_ENV') !== 'production',
         introspection: config.get('NODE_ENV') !== 'production',
 
@@ -37,24 +43,28 @@ import { UserModule } from './user/user.module';
           credentials: true,
         },
 
-        // 에러 포맷 (선택사항)
-        // formatError: (error) => {
-        //   return {
-        //     message: error.message,
-        //     code: error.extensions?.code,
-        //     path: error.path,
-        //   };
-        // },
+        context: ({ req }) => ({
+          req,
+          user: req.user, // JwtStrategy의 validate()에서 주입됨
+          loaders: {
+            userLoader: createUserLoader(prisma),
+            boardLoader: createBoardLoader(prisma),
+          },
+        }),
       }),
     }),
 
-    // 모듈 등록
+    // 3. 앱 모듈들
     PrismaModule,
     UserModule,
     BoardModule,
     PostModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // 4. 전역 예외 필터
+    { provide: APP_FILTER, useClass: GlobalGqlExceptionFilter },
+  ],
 })
 export class AppModule {}
