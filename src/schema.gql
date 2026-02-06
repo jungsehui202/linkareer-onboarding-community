@@ -78,11 +78,11 @@ type Mutation {
 }
 
 type Post {
-  """작성자 (DataLoader 적용: N+1 해결)"""
+  """작성자 (탈퇴 시 null)"""
   author: User
   authorId: Int
 
-  """게시판 (DataLoader 적용)"""
+  """게시판"""
   board: Board!
   boardId: Int!
 
@@ -117,6 +117,12 @@ input PostSortInput {
 }
 
 type Query {
+  """전체글 게시판"""
+  allPosts(skip: Int! = 0, take: Int! = 20): [Post!]!
+
+  """BEST 게시판 (조회수 10+ 기준)"""
+  bestPosts(minViewCount: Int! = 10, take: Int! = 20): [Post!]!
+
   """게시판 단건 조회 (ID)"""
   board(id: Int!): Board!
 
@@ -129,7 +135,7 @@ type Query {
   """현재 로그인한 사용자 정보"""
   me: User!
 
-  """게시글 상세 조회 (조회수 자동 증가)"""
+  """게시글 상세 조회 (조회수 증가)"""
   post(id: Int!): Post!
 
   """게시글 목록 (필터링 + 페이지네이션)"""
