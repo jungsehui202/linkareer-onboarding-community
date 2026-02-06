@@ -1,3 +1,4 @@
+// src/prisma/prisma.service.ts
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
@@ -8,25 +9,35 @@ export class PrismaService
 {
   constructor() {
     super({
-      log:
-        process.env.LOG_PRISMA_QUERY === 'true'
-          ? ['query', 'info', 'warn', 'error'] // 개발: 모든 쿼리 확인
-          : ['error'], // 운영: 에러만
+      log: [
+        { emit: 'event', level: 'query' }, // $on('query')를 위해 반드시 필요
+        'info',
+        'warn',
+        'error',
+      ],
     });
   }
 
   async onModuleInit() {
     await this.$connect();
 
-    if (process.env.NODE_ENV !== 'production') {
-      this.$on('query' as never, (e: any) => {
-        console.log('='.repeat(60));
-        console.log('Query:', e.query);
-        console.log('Params:', e.params);
-        console.log('Duration:', e.duration + 'ms');
-        console.log('='.repeat(60));
-      });
-    }
+    // 이 로그가 뜨는지 먼저 확인하세요!
+    console.log('✅ Prisma Service Initialized');
+
+    this.$on('query' as any, (e: any) => {
+      // 아주 눈에 띄게 출력
+      console.log(
+        '\x1b[33m%s\x1b[0m',
+        '------------------------------------------------------------',
+      );
+      console.log(`🔍 [SQL] ${e.query}`);
+      console.log(`📦 [Params] ${e.params}`);
+      console.log(`⚡ [Duration] ${e.duration}ms`);
+      console.log(
+        '\x1b[33m%s\x1b[0m',
+        '------------------------------------------------------------',
+      );
+    });
   }
 
   async onModuleDestroy() {

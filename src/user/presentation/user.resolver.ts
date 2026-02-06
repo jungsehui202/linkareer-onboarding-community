@@ -1,10 +1,15 @@
-import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
+import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
+import { GraphQLContext } from '../../common/type/context.type';
 import { UserService } from '../application/user.service';
 import { User } from '../domain/user.entity';
+import { LoginDto } from './dto/login.dto';
 import { CreateUserInput, LoginInput, UpdateUserInput } from './dto/user.input';
 
 @Resolver(() => User)
 export class UserResolver {
+  authService: any;
   constructor(private readonly userService: UserService) {}
 
   @Mutation(() => User, {
@@ -15,20 +20,28 @@ export class UserResolver {
     return this.userService.createUser(input);
   }
 
-  @Mutation(() => User, {
-    name: 'updateUser',
-    description: '사용자 정보 수정',
-  })
-  async updateUser(@Args('input') input: UpdateUserInput): Promise<User> {
-    return this.userService.updateUser(input.id, input);
+  @Mutation(() => User)
+  @UseGuards(GqlAuthGuard)
+  async updateMe(
+    @Args('input') input: UpdateUserInput,
+    @Context() ctx: GraphQLContext,
+  ): Promise<User> {
+    const currentUserId = ctx.user!.id;
+    return this.userService.updateUser(currentUserId, input);
   }
 
-  @Mutation(() => User, {
-    name: 'login',
-    description: '로그인',
-  })
-  async login(@Args('input') input: LoginInput): Promise<User> {
-    return this.userService.login(input);
+  @Mutation(() => LoginDto)
+  async login(@Args('input') input: LoginInput): Promise<LoginDto> {
+    const user = await this.userService.login(input);
+
+    const accessToken = this.authService.generateAccessToken(user);
+    const refreshToken = this.authService.generateRefreshToken(user);
+
+    return {
+      user,
+      accessToken,
+      refreshToken,
+    };
   }
 
   @Mutation(() => User, {
@@ -45,6 +58,15 @@ export class UserResolver {
   })
   async users(): Promise<User[]> {
     return this.userService.findAllActive();
+  }
+
+  @Query(() => User, {
+    name: 'me',
+    description: '현재 로그인한 사용자 정보',
+  })
+  @UseGuards(GqlAuthGuard) // ← JWT 검증
+  async me(@Context() ctx: GraphQLContext): Promise<User> {
+    return ctx.user!;
   }
 
   @Query(() => User, {

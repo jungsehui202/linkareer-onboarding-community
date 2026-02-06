@@ -10,7 +10,7 @@ import {
 
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(input: CreatePostInput): Promise<Post> {
     return this.prisma.post.create({
@@ -21,17 +21,14 @@ export class PostService {
   async findMany(filter?: PostFilterInput): Promise<Post[]> {
     const where: Prisma.PostWhereInput = {};
 
-    // 게시판 필터링
     if (filter?.boardId) {
       where.boardId = filter.boardId;
     }
 
-    // 작성자 필터링
     if (filter?.authorId) {
       where.authorId = filter.authorId;
     }
 
-    // 검색어 필터링 (제목 + 내용)
     if (filter?.searchKeyword) {
       where.OR = [
         { title: { contains: filter.searchKeyword } },
@@ -39,25 +36,30 @@ export class PostService {
       ];
     }
 
-    // 조회수 필터링 (BEST 게시판)
     if (filter?.minViewCount !== undefined) {
       where.viewCount = { gte: filter.minViewCount };
     }
 
-    // 스크랩 수 필터링 (인기 게시글)
     if (filter?.minScrapCount !== undefined) {
       where.scrapCount = { gte: filter.minScrapCount };
+    }
+
+    // 정렬 로직 동적 처리 --> (인기순 / 최신순)
+    let orderBy: Prisma.PostOrderByWithRelationInput = { createdAt: 'desc' };
+
+    // 만약 조회수 필터가 걸려있다면 인기순으로 정렬
+    if (filter?.minViewCount !== undefined) {
+      orderBy = { viewCount: 'desc' };
     }
 
     return this.prisma.post.findMany({
       where,
       skip: filter?.skip || 0,
       take: filter?.take || 20,
-      orderBy: { createdAt: 'desc' },
+      orderBy, // 동적으로 설정된 정렬 기준 적용
     });
   }
 
-  // 게시글 상세 조회 (조회수 자동 증가)
   async findById(id: number): Promise<Post> {
     const post = await this.prisma.post.findUnique({
       where: { id },
@@ -67,20 +69,22 @@ export class PostService {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }
 
+    return post;
+  }
+
+  async findByIdWithViewIncrement(id: number): Promise<Post> {
+    const post = await this.findById(id);
+
     // 조회수 증가 (비동기, 에러 무시)
-    // → 조회수 증가 실패가 게시글 조회를 막아서는 안 됨
     this.incrementViewCount(id).catch(() => {
-      // 로깅만 하고 에러는 무시
       console.warn(`Failed to increment view count for post ${id}`);
     });
 
     return post;
   }
 
-  // 게시글 수정
   async update(id: number, input: UpdatePostInput): Promise<Post> {
-    // 존재 확인
-    await this.findByIdWithoutIncrement(id);
+    await this.findById(id);
 
     return this.prisma.post.update({
       where: { id },
@@ -92,17 +96,27 @@ export class PostService {
     });
   }
 
-  // 게시글 삭제 (Hard Delete)
   async delete(id: number): Promise<Post> {
-    // 존재 확인
-    await this.findByIdWithoutIncrement(id);
+    await this.findById(id);
 
     return this.prisma.post.delete({
       where: { id },
     });
   }
 
-  // 조회수 증가 (비동기)
+  async isScrapedByUser(postId: number, userId: number): Promise<boolean> {
+    const scrap = await this.prisma.scrap.findUnique({
+      where: {
+        userId_postId: {
+          userId,
+          postId,
+        },
+      },
+    });
+
+    return !!scrap;
+  }
+
   private async incrementViewCount(id: number): Promise<void> {
     await this.prisma.post.update({
       where: { id },
@@ -110,19 +124,5 @@ export class PostService {
         viewCount: { increment: 1 },
       },
     });
-  }
-
-  // 게시글 조회 (조회수 증가 없이)
-  // 수정/삭제 시 존재 확인용
-  private async findByIdWithoutIncrement(id: number): Promise<Post> {
-    const post = await this.prisma.post.findUnique({
-      where: { id },
-    });
-
-    if (!post) {
-      throw new NotFoundException(`Post with ID ${id} not found`);
-    }
-
-    return post;
   }
 }
