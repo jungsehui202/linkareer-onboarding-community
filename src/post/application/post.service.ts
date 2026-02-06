@@ -44,7 +44,7 @@ export class PostService {
       where.scrapCount = { gte: filter.minScrapCount };
     }
 
-    // 정렬 로직 동적 처리 (인기순 / 최신순)
+    // 정렬 로직 동적 처리 --> (인기순 / 최신순)
     let orderBy: Prisma.PostOrderByWithRelationInput = { createdAt: 'desc' };
 
     // 만약 조회수 필터가 걸려있다면 인기순으로 정렬
