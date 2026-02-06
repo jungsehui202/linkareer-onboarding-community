@@ -29,7 +29,6 @@ input BoardFilterInput {
 }
 
 input CreatePostInput {
-  authorId: Int!
   boardId: Int!
   content: String!
   title: String!
@@ -39,13 +38,19 @@ input CreateUserInput {
   email: String!
   name: String!
   password: String!
-  userRole: UserRole! = USER
+  userRole: UserRole!
 }
 
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+type LoginDto {
+  accessToken: String!
+  refreshToken: String!
+  user: User!
+}
 
 input LoginInput {
   email: String!
@@ -58,21 +63,13 @@ type Mutation {
 
   """회원가입"""
   createUser(input: CreateUserInput!): User!
-
-  """게시글 삭제"""
   deletePost(id: Int!): Post!
 
   """회원 탈퇴 (Soft Delete)"""
   deleteUser(id: Int!): User!
-
-  """로그인"""
-  login(input: LoginInput!): User!
-
-  """게시글 수정"""
+  login(input: LoginInput!): LoginDto!
+  updateMe(input: UpdateUserInput!): User!
   updatePost(input: UpdatePostInput!): Post!
-
-  """사용자 정보 수정"""
-  updateUser(input: UpdateUserInput!): User!
 }
 
 type Post {
@@ -89,9 +86,6 @@ type Post {
   content: String!
   createdAt: DateTime!
   id: Int!
-
-  """현재 사용자가 스크랩했는지 여부"""
-  isScrapped: Boolean!
   scrapCount: Int!
   title: String!
   updatedAt: DateTime!
@@ -115,6 +109,12 @@ input PostSortInput {
 }
 
 type Query {
+  """전체글 게시판"""
+  allPosts(skip: Int! = 0, take: Int! = 20): [Post!]!
+
+  """BEST 게시판 (조회수 10+ 기준)"""
+  bestPosts(minViewCount: Int! = 10, take: Int! = 20): [Post!]!
+
   """게시판 단건 조회 (ID)"""
   board(id: Int!): Board!
 
@@ -123,8 +123,9 @@ type Query {
 
   """게시판 목록 (필터링)"""
   boards(filter: BoardFilterInput): [Board!]!
+  me: User!
 
-  """게시글 상세 조회 (조회수 자동 증가)"""
+  """게시글 상세 조회 (조회수 증가)"""
   post(id: Int!): Post!
 
   """게시글 목록 (필터링 + 페이지네이션)"""

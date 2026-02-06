@@ -1,10 +1,6 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import * as crypto from 'crypto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import { GqlError } from '../../common/exception/gql-error.helper';
 import { PrismaService } from '../../prisma/prisma.service';
 import { User } from '../domain/user.entity';
 import {
@@ -22,41 +18,18 @@ export class UserService {
     const existingActive = await this.prisma.user.findFirst({
       where: {
         email: input.email,
-        isDeleted: false, // 활성 사용자만 체크
+        isDeleted: false,
       },
     });
 
     if (existingActive) {
-      throw new ConflictException('이미 사용 중인 이메일입니다.');
-    }
-
-    // 비밀번호 해싱
-    const hashedPassword = this.hashPassword(input.password);
-
-    // 탈퇴한 사용자가 재가입하는 경우
-    const deletedUser = await this.prisma.user.findFirst({
-      where: {
+      throw GqlError.conflict('Email already exists', {
         email: input.email,
-        isDeleted: true,
-      },
-    });
-
-    if (deletedUser) {
-      // 옵션 1: 기존 데이터 복구 (비권장 - GDPR 위반 가능)
-      // return this.prisma.user.update({
-      //   where: { id: deletedUser.id },
-      //   data: {
-      //     isDeleted: false,
-      //     deletedAt: null,
-      //     password: hashedPassword,
-      //     name: input.name,
-      //   },
-      // });
-      // 옵션 2: 신규 계정 생성 (권장)
-      // → Partial Index로 email 유니크 제약이 활성 사용자만 적용되므로 정상 동작
+      });
     }
 
-    // 4. 신규 가입
+    const hashedPassword = await this.hashPassword(input.password);
+
     return this.prisma.user.create({
       data: {
         email: input.email,
@@ -104,20 +77,21 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
+      throw GqlError.notFound('User not found', {
+        email: email,
+      });
     }
 
     return user;
   }
 
   async login(input: LoginInput): Promise<User> {
-    // 이메일로 사용자 조회
     const user = await this.findByEmail(input.email);
 
-    // 비밀번호 검증
-    const hashedPassword = this.hashPassword(input.password);
-    if (user.password !== hashedPassword) {
-      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
+    const isMatch = await bcrypt.compare(input.password, user.password);
+
+    if (!isMatch) {
+      throw GqlError.unauthorized('Invalid email or password');
     }
 
     return user;
@@ -135,7 +109,7 @@ export class UserService {
     });
   }
 
-  private hashPassword(password: string): string {
-    return crypto.createHash('sha256').update(password).digest('hex');
+  private async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
   }
 }

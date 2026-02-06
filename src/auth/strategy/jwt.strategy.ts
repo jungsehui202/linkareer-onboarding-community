@@ -1,15 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import {
+  createParamDecorator,
+  ExecutionContext,
+  Injectable,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { GqlError } from '../../common/exception/gql-error.helper';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GqlExecutionContext } from '@nestjs/graphql';
 
 export interface JwtPayload {
   sub: number; // User ID
   email: string;
   role: string;
 }
+
+export const CurrentUser = createParamDecorator(
+  (_, context: ExecutionContext) => {
+    const ctx = GqlExecutionContext.create(context);
+    return ctx.getContext().req.user;
+  },
+);
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {

@@ -1,5 +1,7 @@
+import { UseGuards } from '@nestjs/common';
 import {
   Args,
+  Context,
   Int,
   Mutation,
   Parent,
@@ -7,8 +9,12 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
+import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
+import { RolesGuard } from '../../auth/guard/roles.guard';
+import { CurrentUser } from '../../auth/strategy/jwt.strategy';
 import { Board } from '../../board/domain/board.entity';
-import { PrismaService } from '../../prisma/prisma.service';
+import { GqlError } from '../../common/exception/gql-error.helper';
+import { GraphQLContext } from '../../common/type/context.type';
 import { User } from '../../user/domain/user.entity';
 import { PostService } from '../application/post.service';
 import { Post } from '../domain/post.entity';
@@ -17,14 +23,10 @@ import {
   PostFilterInput,
   UpdatePostInput,
 } from './dto/post.input';
-import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 
 @Resolver(() => Post)
 export class PostResolver {
-  constructor(
-    private postService: PostService,
-    private prisma: PrismaService,
-  ) {}
+  constructor(private readonly postService: PostService) {}
 
   @Query(() => [Post], {
     name: 'posts',
@@ -38,53 +40,85 @@ export class PostResolver {
 
   @Query(() => Post, {
     name: 'post',
-    description: '게시글 상세 조회 (조회수 자동 증가)',
+    description: '게시글 상세 조회 (조회수 증가)',
     nullable: false,
   })
   async post(@Args('id', { type: () => Int }) id: number): Promise<Post> {
-    return this.postService.findById(id);
+    return this.postService.findByIdWithViewIncrement(id);
   }
 
-  // JWT 반영 안 된 메서드
-  // @Mutation(() => Post, {
-  //   name: 'createPost',
-  //   description: '게시글 작성',
-  // })
-  // async createPost(@Args('input') input: CreatePostInput): Promise<Post> {
-  //   return this.postService.create(input);
-  // }
+  @Query(() => [Post], {
+    name: 'allPosts',
+    description: '전체글 게시판',
+  })
+  async allPosts(
+    @Args('take', { type: () => Int, defaultValue: 20 }) take: number,
+    @Args('skip', { type: () => Int, defaultValue: 0 }) skip: number,
+  ): Promise<Post[]> {
+    return this.postService.findMany({ take, skip });
+  }
+
+  @Query(() => [Post], {
+    name: 'bestPosts',
+    description: 'BEST 게시판 (조회수 10+ 기준)',
+  })
+  async bestPosts(
+    @Args('minViewCount', { type: () => Int, defaultValue: 10 })
+    minViewCount: number = 10,
+
+    @Args('take', { type: () => Int, defaultValue: 20 })
+    take: number = 20,
+  ): Promise<Post[]> {
+    return this.postService.findMany({
+      minViewCount,
+      take,
+    });
+  }
 
   @Mutation(() => Post, {
     name: 'createPost',
     description: '게시글 작성',
   })
-  @UseGuards(GqlAuthGuard) // ← JWT 검증
+  @UseGuards(GqlAuthGuard)
   async createPost(
     @Args('input') input: CreatePostInput,
-    @Context() ctx: GraphQLContext,
+    @CurrentUser() user: User,
   ): Promise<Post> {
-    const authorId = ctx.user!.id;
+    const authorId = user.id;
 
-    // Service에 authorId 전달
     return this.postService.create({
       ...input,
-      authorId, // ← Context에서 가져온 값
+      authorId,
     });
   }
 
-  @Mutation(() => Post, {
-    name: 'updatePost',
-    description: '게시글 수정',
-  })
-  async updatePost(@Args('input') input: UpdatePostInput): Promise<Post> {
+  @Mutation(() => Post)
+  @UseGuards(GqlAuthGuard)
+  async updatePost(
+    @Args('input') input: UpdatePostInput,
+    @CurrentUser() user: User,
+  ): Promise<Post> {
+    const post = await this.postService.findById(input.id);
+
+    if (post.authorId !== user.id) {
+      throw GqlError.forbidden('본인이 작성한 게시글만 수정할 수 있습니다.');
+    }
+
     return this.postService.update(input.id, input);
   }
 
-  @Mutation(() => Post, {
-    name: 'deletePost',
-    description: '게시글 삭제',
-  })
-  async deletePost(@Args('id', { type: () => Int }) id: number): Promise<Post> {
+  @Mutation(() => Post)
+  @UseGuards(GqlAuthGuard, RolesGuard)
+  async deletePost(
+    @Args('id', { type: () => Int }) id: number,
+    @CurrentUser() user: User,
+  ): Promise<Post> {
+    const post = await this.postService.findById(id);
+
+    if (post.authorId !== user.id) {
+      throw GqlError.forbidden('본인이 작성한 게시글만 삭제할 수 있습니다.');
+    }
+
     return this.postService.delete(id);
   }
 
@@ -92,40 +126,32 @@ export class PostResolver {
     nullable: true,
     description: '작성자 (탈퇴 시 null)',
   })
-  async author(@Parent() post: Post): Promise<User | null> {
+  async author(
+    @Parent() post: Post,
+    @Context() ctx: GraphQLContext,
+  ): Promise<User | null> {
     if (!post.authorId) return null;
 
-    return this.prisma.user.findUnique({
-      where: { id: post.authorId },
-    });
+    if (ctx.loaders?.userLoader) {
+      return ctx.loaders.userLoader.load(post.authorId);
+    }
+
+    return null;
   }
 
   @ResolveField(() => Board, {
+    name: 'board',
     description: '게시판',
   })
-  async board(@Parent() post: Post): Promise<Board> {
-    return this.prisma.board.findUniqueOrThrow({
-      where: { id: post.boardId },
-    });
-  }
+  async board(
+    @Parent() post: Post,
+    @Context() ctx: GraphQLContext,
+  ): Promise<Board | null> {
+    if (ctx.loaders?.boardLoader) {
+      return ctx.loaders.boardLoader.load(post.boardId);
+    }
 
-  @ResolveField(() => Boolean, {
-    description: '현재 사용자가 스크랩했는지 여부',
-  })
-  async isScrapped(@Parent() post: Post): Promise<boolean> {
-    // TODO: JWT에서 현재 사용자 ID 추출
-    const currentUserId = 1;
-
-    const scrap = await this.prisma.scrap.findUnique({
-      where: {
-        userId_postId: {
-          userId: currentUserId,
-          postId: post.id,
-        },
-      },
-    });
-
-    return !!scrap;
+    return null;
   }
 
   @ResolveField(() => Int, {
@@ -136,11 +162,3 @@ export class PostResolver {
     return 0;
   }
 }
-function UseGuards(GqlAuthGuard: any): (target: PostResolver, propertyKey: "createPost", descriptor: TypedPropertyDescriptor<(input: CreatePostInput, ctx: GraphQLContext) => Promise<Post>>) => void | TypedPropertyDescriptor<...> {
-  throw new Error('Function not implemented.');
-}
-
-function Context(): (target: PostResolver, propertyKey: "createPost", parameterIndex: 1) => void {
-  throw new Error('Function not implemented.');
-}
-

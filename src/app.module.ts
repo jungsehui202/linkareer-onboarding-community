@@ -6,7 +6,12 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { createBoardLoader } from './board/application/board.dataloader';
+import { AuthModule } from './auth/auth.module';
+import {
+  createBoardLoader,
+  createChildBoardsLoader,
+  createPostCountLoader,
+} from './board/application/board.dataloader';
 import { BoardModule } from './board/board.module';
 import { GlobalGqlExceptionFilter } from './common/filter/gql-exception.filter';
 import { PostModule } from './post/post.module';
@@ -45,10 +50,11 @@ import { UserModule } from './user/user.module';
 
         context: ({ req }) => ({
           req,
-          user: req.user, // JwtStrategy의 validate()에서 주입됨
           loaders: {
             userLoader: createUserLoader(prisma),
             boardLoader: createBoardLoader(prisma),
+            childBoardsLoader: createChildBoardsLoader(prisma),
+            postCountLoader: createPostCountLoader(prisma),
           },
         }),
       }),
@@ -59,8 +65,11 @@ import { UserModule } from './user/user.module';
     UserModule,
     BoardModule,
     PostModule,
+    AuthModule,
   ],
+
   controllers: [AppController],
+
   providers: [
     AppService,
     // 4. 전역 예외 필터

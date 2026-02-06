@@ -1,14 +1,19 @@
+import { UseGuards } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { AuthService } from '../../auth/application/auth.service';
+import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
+import { CurrentUser } from '../../auth/strategy/jwt.strategy';
 import { UserService } from '../application/user.service';
 import { User } from '../domain/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { CreateUserInput, LoginInput, UpdateUserInput } from './dto/user.input';
-import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 
 @Resolver(() => User)
 export class UserResolver {
-  authService: any;
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Mutation(() => User, {
     name: 'createUser',
@@ -22,10 +27,9 @@ export class UserResolver {
   @UseGuards(GqlAuthGuard)
   async updateMe(
     @Args('input') input: UpdateUserInput,
-    @Context() ctx: GraphQLContext,
+    @CurrentUser() user: User,
   ): Promise<User> {
-    const currentUserId = ctx.user!.id;
-    return this.userService.updateUser(currentUserId, input);
+    return this.userService.updateUser(user.id, input);
   }
 
   @Mutation(() => LoginDto)
@@ -58,13 +62,10 @@ export class UserResolver {
     return this.userService.findAllActive();
   }
 
-  @Query(() => User, {
-    name: 'me',
-    description: '현재 로그인한 사용자 정보',
-  })
-  @UseGuards(GqlAuthGuard) // ← JWT 검증
-  async me(@Context() ctx: GraphQLContext): Promise<User> {
-    return ctx.user!;
+  @Query(() => User)
+  @UseGuards(GqlAuthGuard)
+  me(@CurrentUser() user: { id: number }) {
+    return this.userService.findById(user.id);
   }
 
   @Query(() => User, {
@@ -76,11 +77,3 @@ export class UserResolver {
     return this.userService.findById(id);
   }
 }
-function UseGuards(GqlAuthGuard: any): (target: UserResolver, propertyKey: "me", descriptor: TypedPropertyDescriptor<(ctx: GraphQLContext) => Promise<User>>) => void | TypedPropertyDescriptor<...> {
-  throw new Error('Function not implemented.');
-}
-
-function Context(): (target: UserResolver, propertyKey: "me", parameterIndex: 0) => void {
-  throw new Error('Function not implemented.');
-}
-

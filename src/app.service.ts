@@ -19,7 +19,7 @@ export class AppService {
               </div>
 
               <h1 class="text-3xl font-bold text-slate-800 mb-2">Welcome to Linkareer Community!</h1>
-              <p class="text-slate-600 mb-8">GraphQL + NestJS + Prisma 기반 커뮤니티 API 서버</p>
+              <p class="text-slate-600 mb-8">GraphQL + NestJS + Prisma 링커리어 온보딩 커뮤니티 서버 !!</p>
 
               <div class="space-y-3 mb-8">
                   <div class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
@@ -55,9 +55,9 @@ export class AppService {
               <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6">
                   <h2 class="text-lg font-bold text-slate-800 mb-3">✨ 주요 리팩토링 사항</h2>
                   <ul class="text-left text-sm text-slate-700 space-y-2">
-                      <li>✅ Prisma 직접 사용 (Repository 패턴 제거)</li>
-                      <li>✅ GraphQL 표준 네이밍 (Input/ObjectType)</li>
-                      <li>✅ Filter + FieldResolver 패턴</li>
+                      <li>✅ DataLoader 사용 우선</li>
+                      <li>✅ User / Post / Board 모듈 구현</li>
+                      <li>✅ Guard 구현</li>
                       <li>✅ Soft Delete + Partial Index</li>
                       <li>✅ 환경별 보안 설정 (Playground/Introspection)</li>
                   </ul>

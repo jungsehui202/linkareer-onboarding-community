@@ -7,28 +7,24 @@ import { BoardFilterInput } from '../presentation/dto/board.input';
 
 @Injectable()
 export class BoardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findMany(filter?: BoardFilterInput): Promise<Board[]> {
     const where: Prisma.BoardWhereInput = {};
 
-    // 권한 필터링
     if (filter?.userRole) {
       const allowedRoles = UserRoleUtils.getAllowedRoles(filter.userRole);
       where.requiredRole = { in: allowedRoles };
     }
 
-    // 부모 게시판 필터링
     if (filter?.parentId !== undefined) {
       where.parentId = filter.parentId;
     }
 
-    // Slug 필터링
     if (filter?.slug) {
       where.slug = filter.slug;
     }
 
-    // 검색어 필터링
     if (filter?.searchKeyword) {
       where.OR = [
         { name: { contains: filter.searchKeyword } },
@@ -64,5 +60,26 @@ export class BoardService {
     }
 
     return board;
+  }
+
+  async findParentBoard(parentId: number | null): Promise<Board | null> {
+    if (!parentId) return null;
+
+    return this.prisma.board.findUnique({
+      where: { id: parentId },
+    });
+  }
+
+  async findChildBoards(parentId: number): Promise<Board[]> {
+    return this.prisma.board.findMany({
+      where: { parentId },
+      orderBy: { id: 'asc' },
+    });
+  }
+
+  async getPostCount(boardId: number): Promise<number> {
+    return this.prisma.post.count({
+      where: { boardId },
+    });
   }
 }
