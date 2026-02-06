@@ -26,8 +26,6 @@ async function main() {
         password: await hashPassword('password123'),
         name: '일반 유저',
         userRole: UserRole.USER,
-        subscribeEmail: true,
-        subscribeSMS: false,
       },
     }));
 

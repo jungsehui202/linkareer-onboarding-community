@@ -63,16 +63,12 @@ type Mutation {
 
   """회원가입"""
   createUser(input: CreateUserInput!): User!
-
-  """게시글 삭제"""
   deletePost(id: Int!): Post!
 
   """회원 탈퇴 (Soft Delete)"""
   deleteUser(id: Int!): User!
   login(input: LoginInput!): LoginDto!
   updateMe(input: UpdateUserInput!): User!
-
-  """게시글 수정"""
   updatePost(input: UpdatePostInput!): Post!
 }
 
@@ -90,9 +86,6 @@ type Post {
   content: String!
   createdAt: DateTime!
   id: Int!
-
-  """현재 사용자가 스크랩했는지 여부"""
-  isScrapped: Boolean!
   scrapCount: Int!
   title: String!
   updatedAt: DateTime!
@@ -130,8 +123,6 @@ type Query {
 
   """게시판 목록 (필터링)"""
   boards(filter: BoardFilterInput): [Board!]!
-
-  """현재 로그인한 사용자 정보"""
   me: User!
 
   """게시글 상세 조회 (조회수 증가)"""

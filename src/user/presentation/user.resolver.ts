@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Context, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { AuthService } from '../../auth/application/auth.service';
 import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
-import { GraphQLContext } from '../../common/type/context.type';
+import { CurrentUser } from '../../auth/strategy/jwt.strategy';
 import { UserService } from '../application/user.service';
 import { User } from '../domain/user.entity';
 import { LoginDto } from './dto/login.dto';
@@ -27,10 +27,9 @@ export class UserResolver {
   @UseGuards(GqlAuthGuard)
   async updateMe(
     @Args('input') input: UpdateUserInput,
-    @Context() ctx: GraphQLContext,
+    @CurrentUser() user: User,
   ): Promise<User> {
-    const currentUserId = ctx.user!.id;
-    return this.userService.updateUser(currentUserId, input);
+    return this.userService.updateUser(user.id, input);
   }
 
   @Mutation(() => LoginDto)
@@ -63,13 +62,10 @@ export class UserResolver {
     return this.userService.findAllActive();
   }
 
-  @Query(() => User, {
-    name: 'me',
-    description: '현재 로그인한 사용자 정보',
-  })
+  @Query(() => User)
   @UseGuards(GqlAuthGuard)
-  async me(@Context() ctx: GraphQLContext): Promise<User> {
-    return ctx.user!;
+  me(@CurrentUser() user: { id: number }) {
+    return this.userService.findById(user.id);
   }
 
   @Query(() => User, {

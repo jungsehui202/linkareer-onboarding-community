@@ -50,7 +50,6 @@ import { UserModule } from './user/user.module';
 
         context: ({ req }) => ({
           req,
-          user: req.user,
           loaders: {
             userLoader: createUserLoader(prisma),
             boardLoader: createBoardLoader(prisma),

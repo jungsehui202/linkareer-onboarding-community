@@ -11,6 +11,7 @@ import {
 } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 import { RolesGuard } from '../../auth/guard/roles.guard';
+import { CurrentUser } from '../../auth/strategy/jwt.strategy';
 import { Board } from '../../board/domain/board.entity';
 import { GqlError } from '../../common/exception/gql-error.helper';
 import { GraphQLContext } from '../../common/type/context.type';
@@ -81,9 +82,9 @@ export class PostResolver {
   @UseGuards(GqlAuthGuard)
   async createPost(
     @Args('input') input: CreatePostInput,
-    @Context() ctx: GraphQLContext,
+    @CurrentUser() user: User,
   ): Promise<Post> {
-    const authorId = ctx.user!.id;
+    const authorId = user.id;
 
     return this.postService.create({
       ...input,
@@ -91,40 +92,30 @@ export class PostResolver {
     });
   }
 
-  @Mutation(() => Post, {
-    name: 'updatePost',
-    description: '게시글 수정',
-  })
+  @Mutation(() => Post)
   @UseGuards(GqlAuthGuard)
   async updatePost(
     @Args('input') input: UpdatePostInput,
-    @Context() ctx: GraphQLContext,
+    @CurrentUser() user: User,
   ): Promise<Post> {
-    const currentUserId = ctx.user!.id;
-
-    // 작성자 본인 확인
     const post = await this.postService.findById(input.id);
-    if (post.authorId !== currentUserId) {
+
+    if (post.authorId !== user.id) {
       throw GqlError.forbidden('본인이 작성한 게시글만 수정할 수 있습니다.');
     }
 
     return this.postService.update(input.id, input);
   }
 
-  @Mutation(() => Post, {
-    name: 'deletePost',
-    description: '게시글 삭제',
-  })
+  @Mutation(() => Post)
   @UseGuards(GqlAuthGuard, RolesGuard)
   async deletePost(
     @Args('id', { type: () => Int }) id: number,
-    @Context() ctx: GraphQLContext,
+    @CurrentUser() user: User,
   ): Promise<Post> {
-    const currentUserId = ctx.user!.id;
-
-    // 작성자 본인 확인
     const post = await this.postService.findById(id);
-    if (post.authorId !== currentUserId) {
+
+    if (post.authorId !== user.id) {
       throw GqlError.forbidden('본인이 작성한 게시글만 삭제할 수 있습니다.');
     }
 
@@ -161,21 +152,6 @@ export class PostResolver {
     }
 
     return null;
-  }
-
-  @ResolveField(() => Boolean, {
-    description: '현재 사용자가 스크랩했는지 여부',
-  })
-  async isScrapped(
-    @Parent() post: Post,
-    @Context() ctx: GraphQLContext,
-  ): Promise<boolean> {
-    // 로그인하지 않은 경우
-    if (!ctx.user) {
-      return false;
-    }
-
-    return this.postService.isScrapedByUser(post.id, ctx.user.id);
   }
 
   @ResolveField(() => Int, {
