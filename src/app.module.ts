@@ -6,7 +6,11 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { createBoardLoader } from './board/application/board.dataloader';
+import {
+  createBoardLoader,
+  createChildBoardsLoader,
+  createPostCountLoader,
+} from './board/application/board.dataloader';
 import { BoardModule } from './board/board.module';
 import { GlobalGqlExceptionFilter } from './common/filter/gql-exception.filter';
 import { PostModule } from './post/post.module';
@@ -43,17 +47,16 @@ import { UserModule } from './user/user.module';
           credentials: true,
         },
 
-        context: ({ req }) => {
-          // 1. 여기서 prisma 서비스가 잘 전달되는지 확인
-          // 2. 반드시 { req, loaders } 형태의 '하나의 객체'를 리턴해야 함
-          return {
-            req,
-            loaders: {
-              userLoader: createUserLoader(prisma),
-              boardLoader: createBoardLoader(prisma),
-            },
-          };
-        },
+        context: ({ req }) => ({
+          req,
+          user: req.user,
+          loaders: {
+            userLoader: createUserLoader(prisma),
+            boardLoader: createBoardLoader(prisma),
+            childBoardsLoader: createChildBoardsLoader(prisma),
+            postCountLoader: createPostCountLoader(prisma),
+          },
+        }),
       }),
     }),
 
@@ -63,7 +66,9 @@ import { UserModule } from './user/user.module';
     BoardModule,
     PostModule,
   ],
+
   controllers: [AppController],
+
   providers: [
     AppService,
     // 4. 전역 예외 필터

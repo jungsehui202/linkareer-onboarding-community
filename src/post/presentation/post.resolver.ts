@@ -11,8 +11,8 @@ import {
 } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
 import { Board } from '../../board/domain/board.entity';
+import { GqlError } from '../../common/exception/gql-error.helper';
 import { GraphQLContext } from '../../common/type/context.type';
-import { PrismaService } from '../../prisma/prisma.service';
 import { User } from '../../user/domain/user.entity';
 import { PostService } from '../application/post.service';
 import { Post } from '../domain/post.entity';
@@ -24,10 +24,7 @@ import {
 
 @Resolver(() => Post)
 export class PostResolver {
-  constructor(
-    private postService: PostService,
-    private prisma: PrismaService,
-  ) {}
+  constructor(private readonly postService: PostService) {}
 
   @Query(() => [Post], {
     name: 'posts',
@@ -41,37 +38,55 @@ export class PostResolver {
 
   @Query(() => Post, {
     name: 'post',
-    description: '게시글 상세 조회 (조회수 자동 증가)',
+    description: '게시글 상세 조회 (조회수 증가)',
     nullable: false,
   })
   async post(@Args('id', { type: () => Int }) id: number): Promise<Post> {
-    return this.postService.findById(id);
+    return this.postService.findByIdWithViewIncrement(id);
   }
 
-  // JWT 반영 안 된 메서드
-  // @Mutation(() => Post, {
-  //   name: 'createPost',
-  //   description: '게시글 작성',
-  // })
-  // async createPost(@Args('input') input: CreatePostInput): Promise<Post> {
-  //   return this.postService.create(input);
-  // }
+  @Query(() => [Post], {
+    name: 'allPosts',
+    description: '전체글 게시판',
+  })
+  async allPosts(
+    @Args('take', { type: () => Int, defaultValue: 20 }) take: number,
+    @Args('skip', { type: () => Int, defaultValue: 0 }) skip: number,
+  ): Promise<Post[]> {
+    return this.postService.findMany({ take, skip });
+  }
+
+  @Query(() => [Post], {
+    name: 'bestPosts',
+    description: 'BEST 게시판 (조회수 10+ 기준)',
+  })
+  async bestPosts(
+    @Args('minViewCount', { type: () => Int, defaultValue: 10 })
+    minViewCount: number = 10,
+
+    @Args('take', { type: () => Int, defaultValue: 20 })
+    take: number = 20,
+  ): Promise<Post[]> {
+    return this.postService.findMany({
+      minViewCount,
+      take,
+    });
+  }
 
   @Mutation(() => Post, {
     name: 'createPost',
     description: '게시글 작성',
   })
-  @UseGuards(GqlAuthGuard) // ← JWT 검증
+  @UseGuards(GqlAuthGuard)
   async createPost(
     @Args('input') input: CreatePostInput,
     @Context() ctx: GraphQLContext,
   ): Promise<Post> {
     const authorId = ctx.user!.id;
 
-    // Service에 authorId 전달
     return this.postService.create({
       ...input,
-      authorId, // ← Context에서 가져온 값
+      authorId,
     });
   }
 
@@ -79,7 +94,19 @@ export class PostResolver {
     name: 'updatePost',
     description: '게시글 수정',
   })
-  async updatePost(@Args('input') input: UpdatePostInput): Promise<Post> {
+  @UseGuards(GqlAuthGuard)
+  async updatePost(
+    @Args('input') input: UpdatePostInput,
+    @Context() ctx: GraphQLContext,
+  ): Promise<Post> {
+    const currentUserId = ctx.user!.id;
+
+    // 작성자 본인 확인
+    const post = await this.postService.findById(input.id);
+    if (post.authorId !== currentUserId) {
+      throw GqlError.forbidden('본인이 작성한 게시글만 수정할 수 있습니다.');
+    }
+
     return this.postService.update(input.id, input);
   }
 
@@ -87,83 +114,67 @@ export class PostResolver {
     name: 'deletePost',
     description: '게시글 삭제',
   })
-  async deletePost(@Args('id', { type: () => Int }) id: number): Promise<Post> {
+  @UseGuards(GqlAuthGuard)
+  async deletePost(
+    @Args('id', { type: () => Int }) id: number,
+    @Context() ctx: GraphQLContext,
+  ): Promise<Post> {
+    const currentUserId = ctx.user!.id;
+
+    // 작성자 본인 확인
+    const post = await this.postService.findById(id);
+    if (post.authorId !== currentUserId) {
+      throw GqlError.forbidden('본인이 작성한 게시글만 삭제할 수 있습니다.');
+    }
+
     return this.postService.delete(id);
   }
 
-  // 데이터로더 반영 안 된 메서드
-  // @ResolveField(() => User, {
-  //   nullable: true,
-  //   description: '작성자 (탈퇴 시 null)',
-  // })
-  // async author(@Parent() post: Post): Promise<User | null> {
-  //   if (!post.authorId) return null;
-
-  //   return this.prisma.user.findUnique({
-  //     where: { id: post.authorId },
-  //   });
-  // }
-
   @ResolveField(() => User, {
     nullable: true,
-    description: '작성자 (DataLoader 적용: N+1 해결)',
+    description: '작성자 (탈퇴 시 null)',
   })
   async author(
     @Parent() post: Post,
     @Context() ctx: GraphQLContext,
   ): Promise<User | null> {
-    console.log('Context check:', ctx);
-    console.log('Loaders check:', ctx?.loaders);
+    if (!post.authorId) return null;
 
-    if (!ctx.loaders) {
-      console.error('Loader가 Context에 주입되지 않았습니다 !!');
-      return null;
+    if (ctx.loaders?.userLoader) {
+      return ctx.loaders.userLoader.load(post.authorId);
     }
 
-    if (!post.authorId) {
-      return null;
-    }
-
-    return ctx.loaders.userLoader.load(post.authorId);
+    return null;
   }
 
-  // 데이터로더 반영 안 된 메서드
-  // @ResolveField(() => Board, {
-  //   description: '게시판',
-  // })
-  // async board(@Parent() post: Post): Promise<Board> {
-  //   return this.prisma.board.findUniqueOrThrow({
-  //     where: { id: post.boardId },
-  //   });
-  // }
-
   @ResolveField(() => Board, {
-    description: '게시판 (DataLoader 적용)',
+    name: 'board',
+    description: '게시판',
   })
   async board(
     @Parent() post: Post,
     @Context() ctx: GraphQLContext,
   ): Promise<Board | null> {
-    return ctx.loaders.boardLoader.load(post.boardId);
+    if (ctx.loaders?.boardLoader) {
+      return ctx.loaders.boardLoader.load(post.boardId);
+    }
+
+    return null;
   }
 
   @ResolveField(() => Boolean, {
     description: '현재 사용자가 스크랩했는지 여부',
   })
-  async isScrapped(@Parent() post: Post): Promise<boolean> {
-    // TODO: JWT에서 현재 사용자 ID 추출
-    const currentUserId = 1;
+  async isScrapped(
+    @Parent() post: Post,
+    @Context() ctx: GraphQLContext,
+  ): Promise<boolean> {
+    // 로그인하지 않은 경우
+    if (!ctx.user) {
+      return false;
+    }
 
-    const scrap = await this.prisma.scrap.findUnique({
-      where: {
-        userId_postId: {
-          userId: currentUserId,
-          postId: post.id,
-        },
-      },
-    });
-
-    return !!scrap;
+    return this.postService.isScrapedByUser(post.id, ctx.user.id);
   }
 
   @ResolveField(() => Int, {
