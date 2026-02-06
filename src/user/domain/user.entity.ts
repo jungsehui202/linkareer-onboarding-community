@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { User as PrismaUser, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
 registerEnumType(UserRole, {
   name: 'UserRole',
@@ -9,7 +9,7 @@ registerEnumType(UserRole, {
 export { UserRole };
 
 @ObjectType()
-export class User implements PrismaUser {
+export class User {
   @Field(() => Int)
   id: number;
 
@@ -28,8 +28,9 @@ export class User implements PrismaUser {
   @Field()
   updatedAt: Date;
 
-  // Prisma 필드 (GraphQL에 노출하지 않음)
+  // 내부 필드 (GraphQL 미노출)
   password: string;
+  refreshToken?: string | null;
   subscribeEmail: boolean;
   subscribeSMS: boolean;
   isDeleted: boolean;

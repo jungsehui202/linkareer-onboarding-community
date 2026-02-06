@@ -1,8 +1,7 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { Post as PrismaPost } from '@prisma/client';
 
 @ObjectType()
-export class Post implements PrismaPost {
+export class Post {
   @Field(() => Int)
   id: number;
 
