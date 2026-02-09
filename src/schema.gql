@@ -85,8 +85,12 @@ type Post {
   commentCount: Int!
   content: String!
   createdAt: DateTime!
+  deletedAt: DateTime
   id: Int!
+  popularityScore: Int!
+  rank: Float
   scrapCount: Int!
+  searchCount: Int!
   title: String!
   updatedAt: DateTime!
   viewCount: Int!
@@ -112,8 +116,8 @@ type Query {
   """전체글 게시판"""
   allPosts(skip: Int! = 0, take: Int! = 20): [Post!]!
 
-  """BEST 게시판 (조회수 10+ 기준)"""
-  bestPosts(minViewCount: Int! = 10, take: Int! = 20): [Post!]!
+  """BEST 게시판 (인기 점수 기준)"""
+  bestPosts(take: Int! = 20): [Post!]!
 
   """게시판 단건 조회 (ID)"""
   board(id: Int!): Board!
@@ -130,6 +134,14 @@ type Query {
 
   """게시글 목록 (필터링 + 페이지네이션)"""
   posts(filter: PostFilterInput): [Post!]!
+
+  """게시글 검색 (Full-Text Search + 검색 통계)"""
+  searchPostsWithSearchCountsIncrement(
+    """검색 키워드"""
+    keyword: String!
+    skip: Int! = 0
+    take: Int! = 20
+  ): [Post!]!
 
   """사용자 단건 조회"""
   user(id: Int!): User!

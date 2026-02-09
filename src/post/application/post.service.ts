@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Post } from '../domain/post.entity';
@@ -12,14 +16,19 @@ import {
 export class PostService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(input: CreatePostInput & { authorId: number }) {
+  async create(input: CreatePostInput & { authorId: number }): Promise<Post> {
     return this.prisma.post.create({
-      data: input,
+      data: {
+        ...input,
+        popularityScore: 0, // 초기값
+      },
     });
   }
 
   async findMany(filter?: PostFilterInput): Promise<Post[]> {
-    const where: Prisma.PostWhereInput = {};
+    const where: Prisma.PostWhereInput = {
+      deletedAt: null, // Soft Delete 제외
+    };
 
     if (filter?.boardId) {
       where.boardId = filter.boardId;
@@ -31,8 +40,8 @@ export class PostService {
 
     if (filter?.searchKeyword) {
       where.OR = [
-        { title: { contains: filter.searchKeyword } },
-        { content: { contains: filter.searchKeyword } },
+        { title: { contains: filter.searchKeyword, mode: 'insensitive' } },
+        { content: { contains: filter.searchKeyword, mode: 'insensitive' } },
       ];
     }
 
@@ -44,10 +53,8 @@ export class PostService {
       where.scrapCount = { gte: filter.minScrapCount };
     }
 
-    // 정렬 로직 동적 처리 --> (인기순 / 최신순)
     let orderBy: Prisma.PostOrderByWithRelationInput = { createdAt: 'desc' };
 
-    // 만약 조회수 필터가 걸려있다면 인기순으로 정렬
     if (filter?.minViewCount !== undefined) {
       orderBy = { viewCount: 'desc' };
     }
@@ -56,7 +63,63 @@ export class PostService {
       where,
       skip: filter?.skip || 0,
       take: filter?.take || 20,
-      orderBy, // 동적으로 설정된 정렬 기준 적용
+      orderBy,
+    });
+  }
+
+  async searchPostsWithSearchCountsIncrement(
+    keyword: string,
+    take: number = 20,
+    skip: number = 0,
+  ): Promise<Post[]> {
+    if (!keyword || keyword.trim().length === 0) {
+      return [];
+    }
+
+    if (keyword.length > 100) {
+      throw new BadRequestException('검색어는 100자 이하로 입력해 주세요.');
+    }
+
+    const sanitized = keyword.replace(/[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]/g, '').trim();
+
+    if (sanitized.length === 0) {
+      return [];
+    }
+
+    const posts = await this.prisma.$queryRaw<Post[]>`
+      SELECT
+        p.*,
+        ts_rank(
+          to_tsvector('simple', COALESCE(p.title, '') || ' ' || COALESCE(p.content, '')),
+          plainto_tsquery('simple', ${sanitized})
+        ) AS rank
+      FROM posts p
+      WHERE
+        p.deleted_at IS NULL
+        AND to_tsvector('simple', COALESCE(p.title, '') || ' ' || COALESCE(p.content, ''))
+          @@ plainto_tsquery('simple', ${sanitized})
+      ORDER BY rank DESC, p.created_at DESC
+      LIMIT ${take}
+      OFFSET ${skip}
+    `;
+
+    if (posts.length > 0) {
+      this.incrementSearchCounts(posts.map((p) => p.id)).catch(() => {
+        console.warn('Failed to update search counts');
+      });
+    }
+
+    return posts;
+  }
+
+  async findBestPosts(take: number = 20): Promise<Post[]> {
+    return this.prisma.post.findMany({
+      where: {
+        deletedAt: null,
+        viewCount: { gte: 10 }, // ← Partial Index 조건
+      },
+      orderBy: [{ popularityScore: 'desc' }, { createdAt: 'desc' }],
+      take,
     });
   }
 
@@ -65,7 +128,7 @@ export class PostService {
       where: { id },
     });
 
-    if (!post) {
+    if (!post || post.deletedAt) {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }
 
@@ -75,8 +138,8 @@ export class PostService {
   async findByIdWithViewIncrement(id: number): Promise<Post> {
     const post = await this.findById(id);
 
-    // 조회수 증가 (비동기, 에러 무시)
-    this.incrementViewCount(id).catch(() => {
+    // 조회수 증가 + popularityScore 업데이트
+    this.incrementViewCountAndPopularity(id).catch(() => {
       console.warn(`Failed to increment view count for post ${id}`);
     });
 
@@ -96,11 +159,32 @@ export class PostService {
     });
   }
 
+  async incrementScrapCount(postId: number): Promise<void> {
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: {
+        scrapCount: { increment: 1 },
+        popularityScore: { increment: 50 }, // scrap_count * 50
+      },
+    });
+  }
+
+  async decrementScrapCount(postId: number): Promise<void> {
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: {
+        scrapCount: { decrement: 1 },
+        popularityScore: { decrement: 50 },
+      },
+    });
+  }
+
   async delete(id: number): Promise<Post> {
     await this.findById(id);
 
-    return this.prisma.post.delete({
+    return this.prisma.post.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
   }
 
@@ -117,11 +201,21 @@ export class PostService {
     return !!scrap;
   }
 
-  private async incrementViewCount(id: number): Promise<void> {
+  private async incrementViewCountAndPopularity(id: number): Promise<void> {
     await this.prisma.post.update({
       where: { id },
       data: {
         viewCount: { increment: 1 },
+        popularityScore: { increment: 5 }, // view_count * 5
+      },
+    });
+  }
+
+  private async incrementSearchCounts(postIds: number[]): Promise<void> {
+    await this.prisma.post.updateMany({
+      where: { id: { in: postIds } },
+      data: {
+        searchCount: { increment: 1 },
       },
     });
   }

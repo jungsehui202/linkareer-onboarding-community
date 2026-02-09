@@ -1,4 +1,4 @@
-import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class Post {
@@ -17,6 +17,15 @@ export class Post {
   @Field(() => Int)
   scrapCount: number;
 
+  @Field(() => Int)
+  searchCount: number;
+
+  @Field(() => Int)
+  popularityScore: number;
+
+  @Field({ nullable: true })
+  deletedAt: Date | null;
+
   @Field(() => Int, { nullable: true })
   authorId: number | null;
 
@@ -28,4 +37,7 @@ export class Post {
 
   @Field()
   updatedAt: Date;
+
+  @Field(() => Float, { nullable: true })
+  rank?: number;
 }

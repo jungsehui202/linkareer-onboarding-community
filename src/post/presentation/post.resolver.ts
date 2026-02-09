@@ -14,7 +14,7 @@ import { RolesGuard } from '../../auth/guard/roles.guard';
 import { CurrentUser } from '../../auth/strategy/jwt.strategy';
 import { Board } from '../../board/domain/board.entity';
 import { GqlError } from '../../common/exception/gql-error.helper';
-import { GraphQLContext } from '../../common/type/context.type';
+import { GraphQLContext } from '../../common/graphql/context/graphqh-context.interface';
 import { User } from '../../user/domain/user.entity';
 import { PostService } from '../application/post.service';
 import { Post } from '../domain/post.entity';
@@ -59,20 +59,29 @@ export class PostResolver {
   }
 
   @Query(() => [Post], {
+    name: 'searchPostsWithSearchCountsIncrement',
+    description: '게시글 검색 (Full-Text Search + 검색 통계)',
+  })
+  async searchPostsWithSearchCountsIncrement(
+    @Args('keyword', { description: '검색 키워드' }) keyword: string,
+    @Args('take', { type: () => Int, defaultValue: 20 }) take: number = 20,
+    @Args('skip', { type: () => Int, defaultValue: 0 }) skip: number = 0,
+  ): Promise<Post[]> {
+    return this.postService.searchPostsWithSearchCountsIncrement(
+      keyword,
+      take,
+      skip,
+    );
+  }
+
+  @Query(() => [Post], {
     name: 'bestPosts',
-    description: 'BEST 게시판 (조회수 10+ 기준)',
+    description: 'BEST 게시판 (인기 점수 기준)',
   })
   async bestPosts(
-    @Args('minViewCount', { type: () => Int, defaultValue: 10 })
-    minViewCount: number = 10,
-
-    @Args('take', { type: () => Int, defaultValue: 20 })
-    take: number = 20,
+    @Args('take', { type: () => Int, defaultValue: 20 }) take: number = 20,
   ): Promise<Post[]> {
-    return this.postService.findMany({
-      minViewCount,
-      take,
-    });
+    return this.postService.findBestPosts(take);
   }
 
   @Mutation(() => Post, {
@@ -130,13 +139,11 @@ export class PostResolver {
     @Parent() post: Post,
     @Context() ctx: GraphQLContext,
   ): Promise<User | null> {
-    if (!post.authorId) return null;
-
-    if (ctx.loaders?.userLoader) {
-      return ctx.loaders.userLoader.load(post.authorId);
+    if (!post.authorId) {
+      return null;
     }
 
-    return null;
+    return ctx.loaders.userLoader.load(post.authorId);
   }
 
   @ResolveField(() => Board, {
@@ -147,11 +154,7 @@ export class PostResolver {
     @Parent() post: Post,
     @Context() ctx: GraphQLContext,
   ): Promise<Board | null> {
-    if (ctx.loaders?.boardLoader) {
-      return ctx.loaders.boardLoader.load(post.boardId);
-    }
-
-    return null;
+    return ctx.loaders.boardLoader.load(post.boardId);
   }
 
   @ResolveField(() => Int, {
