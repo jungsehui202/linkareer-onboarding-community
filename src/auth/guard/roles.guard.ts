@@ -29,11 +29,12 @@ export class RolesGuard implements CanActivate {
     }
 
     if (!user) {
-      throw GqlError.unauthorized('UnauthorizedException occurred !!');
+      throw GqlError.unauthorized('Authentication required');
     }
 
-    if (!requiredRoles.includes(user.role)) {
-      throw GqlError.forbidden('Insufficient role');
+    // 수정: user.role → user.userRole ..
+    if (!requiredRoles.includes(user.userRole)) {
+      throw GqlError.forbidden('Insufficient permissions');
     }
 
     return true;

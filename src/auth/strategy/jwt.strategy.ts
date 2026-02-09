@@ -4,16 +4,17 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { PassportStrategy } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { GqlError } from '../../common/exception/gql-error.helper';
 import { PrismaService } from '../../prisma/prisma.service';
-import { GqlExecutionContext } from '@nestjs/graphql';
 
 export interface JwtPayload {
-  sub: number; // User ID
+  sub: number;
   email: string;
-  role: string;
+  role: UserRole;
 }
 
 export const CurrentUser = createParamDecorator(
@@ -43,11 +44,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     if (!user) {
-      throw GqlError.notFound('User not found !!', {
-        payload,
+      throw GqlError.notFound('User not found', {
+        userId: payload.sub,
       });
     }
 
-    return user; // Request에 user 추가
+    // user 객체 반환 (req.user에 저장됨)
+    return user;
   }
 }
