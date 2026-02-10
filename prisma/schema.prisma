@@ -31,11 +31,12 @@ datasource db {
 // children Board[] @relation("BoardHierarchy")
 
 model User {
-  id       Int      @id @default(autoincrement())
-  email    String
-  password String
-  name     String
-  userRole UserRole @default(USER)
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  password     String
+  name         String
+  userRole     UserRole @default(USER)
+  refreshToken String?  @db.Text
 
   subscribeEmail Boolean @default(false) @map("subscribe_email")
   subscribeSMS   Boolean @default(false) @map("subscribe_sms")
@@ -49,7 +50,6 @@ model User {
   posts  Post[]
   scraps Scrap[]
 
-  @@index([email])
   @@index([isDeleted])
   @@map("users")
 }
@@ -83,32 +83,39 @@ model Board {
 }
 
 model Post {
-  id      Int    @id @default(autoincrement())
+  id Int @id @default(autoincrement())
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  authorId Int?  @map("author_id")
+  author   User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  boardId Int     @map("board_id")
+  board   Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  scraps  Scrap[]
+
   title   String
   content String @db.Text
 
   viewCount  Int @default(0) @map("view_count")
   scrapCount Int @default(0) @map("scrap_count")
 
-  authorId Int?  @map("author_id")
-  author   User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  // 검색 통계
+  searchCount Int @default(0) @map("search_count") // 검색 노출 횟수
 
-  boardId Int   @map("board_id")
-  board   Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  scraps Scrap[]
+  // BEST 게시판 최적화
+  popularityScore Int @default(0) @map("popularity_score")
 
   @@index([title])
   @@index([authorId])
   @@index([boardId])
-  @@index([viewCount])
-  @@index([scrapCount])
-  @@index([createdAt])
-  @@index([viewCount, createdAt])
-  @@index([viewCount, scrapCount])
+  @@index([deletedAt])
+  @@index([popularityScore(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([deletedAt, viewCount(sort: Desc)])
+  @@index([deletedAt, popularityScore(sort: Desc)])
   @@map("posts")
 }
 

@@ -29,7 +29,6 @@ input BoardFilterInput {
 }
 
 input CreatePostInput {
-  authorId: Int!
   boardId: Int!
   content: String!
   title: String!
@@ -39,7 +38,7 @@ input CreateUserInput {
   email: String!
   name: String!
   password: String!
-  userRole: UserRole! = USER
+  userRole: UserRole!
 }
 
 """
@@ -64,16 +63,12 @@ type Mutation {
 
   """회원가입"""
   createUser(input: CreateUserInput!): User!
-
-  """게시글 삭제"""
   deletePost(id: Int!): Post!
 
   """회원 탈퇴 (Soft Delete)"""
   deleteUser(id: Int!): User!
   login(input: LoginInput!): LoginDto!
   updateMe(input: UpdateUserInput!): User!
-
-  """게시글 수정"""
   updatePost(input: UpdatePostInput!): Post!
 }
 
@@ -90,11 +85,12 @@ type Post {
   commentCount: Int!
   content: String!
   createdAt: DateTime!
+  deletedAt: DateTime
   id: Int!
-
-  """현재 사용자가 스크랩했는지 여부"""
-  isScrapped: Boolean!
+  popularityScore: Int!
+  rank: Float
   scrapCount: Int!
+  searchCount: Int!
   title: String!
   updatedAt: DateTime!
   viewCount: Int!
@@ -120,8 +116,8 @@ type Query {
   """전체글 게시판"""
   allPosts(skip: Int! = 0, take: Int! = 20): [Post!]!
 
-  """BEST 게시판 (조회수 10+ 기준)"""
-  bestPosts(minViewCount: Int! = 10, take: Int! = 20): [Post!]!
+  """BEST 게시판 (인기 점수 기준)"""
+  bestPosts(take: Int! = 20): [Post!]!
 
   """게시판 단건 조회 (ID)"""
   board(id: Int!): Board!
@@ -131,8 +127,6 @@ type Query {
 
   """게시판 목록 (필터링)"""
   boards(filter: BoardFilterInput): [Board!]!
-
-  """현재 로그인한 사용자 정보"""
   me: User!
 
   """게시글 상세 조회 (조회수 증가)"""
@@ -141,10 +135,16 @@ type Query {
   """게시글 목록 (필터링 + 페이지네이션)"""
   posts(filter: PostFilterInput): [Post!]!
 
+  """게시글 검색 (Full-Text Search + 검색 통계)"""
+  searchPostsWithSearchCountsIncrement(
+    """검색 키워드"""
+    keyword: String!
+    skip: Int! = 0
+    take: Int! = 20
+  ): [Post!]!
+
   """사용자 단건 조회"""
   user(id: Int!): User!
-
-  """활성 사용자 목록"""
   users: [User!]!
 }
 

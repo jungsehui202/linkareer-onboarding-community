@@ -1,8 +1,7 @@
-import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { Post as PrismaPost } from '@prisma/client';
+import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
-export class Post implements PrismaPost {
+export class Post {
   @Field(() => Int)
   id: number;
 
@@ -18,6 +17,15 @@ export class Post implements PrismaPost {
   @Field(() => Int)
   scrapCount: number;
 
+  @Field(() => Int)
+  searchCount: number;
+
+  @Field(() => Int)
+  popularityScore: number;
+
+  @Field({ nullable: true })
+  deletedAt: Date | null;
+
   @Field(() => Int, { nullable: true })
   authorId: number | null;
 
@@ -29,4 +37,7 @@ export class Post implements PrismaPost {
 
   @Field()
   updatedAt: Date;
+
+  @Field(() => Float, { nullable: true })
+  rank?: number;
 }

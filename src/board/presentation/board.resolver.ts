@@ -7,7 +7,7 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { GraphQLContext } from '../../common/type/context.type';
+import { GraphQLContext } from '../../common/graphql/context/graphqh-context.interface';
 import { BoardService } from '../application/board.service';
 import { Board } from '../domain/board.entity';
 import { BoardFilterInput } from './dto/board.input';
@@ -52,13 +52,11 @@ export class BoardResolver {
     @Parent() board: Board,
     @Context() ctx: GraphQLContext,
   ): Promise<Board | null> {
-    if (!board.parentId) return null;
-
-    if (ctx.loaders?.boardLoader) {
-      return ctx.loaders.boardLoader.load(board.parentId);
+    if (!board.parentId) {
+      return null;
     }
 
-    return this.boardService.findParentBoard(board.parentId);
+    return ctx.loaders.boardLoader.load(board.parentId);
   }
 
   @ResolveField(() => [Board], {
@@ -68,11 +66,7 @@ export class BoardResolver {
     @Parent() board: Board,
     @Context() ctx: GraphQLContext,
   ): Promise<Board[]> {
-    if (ctx.loaders?.childBoardsLoader) {
-      return ctx.loaders.childBoardsLoader.load(board.id);
-    }
-
-    return this.boardService.findChildBoards(board.id);
+    return ctx.loaders.childBoardsLoader.load(board.id);
   }
 
   @ResolveField(() => Int, {
@@ -82,10 +76,6 @@ export class BoardResolver {
     @Parent() board: Board,
     @Context() ctx: GraphQLContext,
   ): Promise<number> {
-    if (ctx.loaders?.postCountLoader) {
-      return ctx.loaders.postCountLoader.load(board.id);
-    }
-
-    return this.boardService.getPostCount(board.id);
+    return ctx.loaders.postCountLoader.load(board.id);
   }
 }
