@@ -124,7 +124,7 @@ export class PostResolver {
   ): Promise<Post> {
     const post = await this.postService.findById(id);
 
-    if (post.authorId !== user.id) {
+    if (user.userRole !== 'ADMIN' && post.authorId !== user.id) {
       throw GqlError.forbidden('본인이 작성한 게시글만 삭제할 수 있습니다.');
     }
 

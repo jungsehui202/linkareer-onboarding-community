@@ -32,7 +32,7 @@ datasource db {
 
 model User {
   id           Int      @id @default(autoincrement())
-  email        String
+  email        String   @unique
   password     String
   name         String
   userRole     UserRole @default(USER)
@@ -112,8 +112,6 @@ model Post {
   @@index([authorId])
   @@index([boardId])
   @@index([deletedAt])
-  @@index([viewCount(sort: Desc)])
-  @@index([scrapCount(sort: Desc)])
   @@index([popularityScore(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([deletedAt, viewCount(sort: Desc)])

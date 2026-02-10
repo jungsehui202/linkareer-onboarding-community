@@ -2,6 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { AuthService } from '../../auth/application/auth.service';
 import { GqlAuthGuard } from '../../auth/guard/gql-auth.guard';
+import { RolesGuard } from '../../auth/guard/roles.guard';
 import { CurrentUser } from '../../auth/strategy/jwt.strategy';
 import { UserService } from '../application/user.service';
 import { User } from '../domain/user.entity';
@@ -54,10 +55,17 @@ export class UserResolver {
     return this.userService.deleteUser(id);
   }
 
-  @Query(() => [User], {
-    name: 'users',
-    description: '활성 사용자 목록',
-  })
+  // @Query(() => [User], {
+  //   name: 'users',
+  //   description: '활성 사용자 목록',
+  // })
+  // async users(): Promise<User[]> {
+  //   return this.userService.findAllActive();
+  // }
+
+  // user.resolver.ts
+  @Query(() => [User])
+  @UseGuards(GqlAuthGuard, RolesGuard) // 어드민만 가능하게 설정되어 있다면
   async users(): Promise<User[]> {
     return this.userService.findAllActive();
   }
