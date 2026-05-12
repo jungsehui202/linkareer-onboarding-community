@@ -1,5 +1,6 @@
-import { Board, User } from '@prisma/client'; // 향후 도메인 엔티티로 교체
 import DataLoader from 'dataloader';
+import { Board } from '../../board/domain/entities/board.entity';
+import { User } from '../../user/domain/entities/user.entity';
 
 export interface IDataLoaders {
   userLoader: DataLoader<number, User | null>;

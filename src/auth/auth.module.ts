@@ -1,10 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { PrismaModule } from '../prisma/prisma.module';
-import { AuthService } from './application/auth.service';
-import { JwtStrategy } from './strategy/jwt.strategy';
+import { UserModule } from '../user/user.module';
+import { TOKEN_ISSUER } from './application/ports/token-issuer.port';
+import { AuthService } from './application/services/auth.service';
+import { JwtTokenIssuer } from './infrastructure/adapters/jwt-token-issuer.adapter';
+import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -19,9 +21,13 @@ import { JwtStrategy } from './strategy/jwt.strategy';
         },
       }),
     }),
-    PrismaModule,
+    forwardRef(() => UserModule),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}
