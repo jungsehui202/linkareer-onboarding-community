@@ -1,24 +1,41 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  BOARD_REPOSITORY,
+  BoardRepository,
+} from '../../board/domain/repositories/board.repository';
 import {
   createBoardLoader,
   createChildBoardsLoader,
-  createPostCountLoader,
-} from '../../board/application/board.dataloader';
-import { PrismaService } from '../../prisma/prisma.service';
-import { createUserLoader } from '../../user/application/user.dataloader';
+} from '../../board/infrastructure/persistence/board.dataloader';
+import {
+  POST_REPOSITORY,
+  PostRepository,
+} from '../../post/domain/repositories/post.repository';
+import { createPostCountByBoardLoader } from '../../post/infrastructure/persistence/post.dataloader';
+import {
+  USER_REPOSITORY,
+  UserRepository,
+} from '../../user/domain/repositories/user.repository';
+import { createUserLoader } from '../../user/infrastructure/persistence/user.dataloader';
 import { IDataLoaders } from './dataloader.interface';
 
 @Injectable()
 export class DataLoaderFactory {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: UserRepository,
+    @Inject(BOARD_REPOSITORY)
+    private readonly boardRepository: BoardRepository,
+    @Inject(POST_REPOSITORY)
+    private readonly postRepository: PostRepository,
+  ) {}
 
-  // 매 요청마다 호출되어 새로운 로더 세트를 생성
   create(): IDataLoaders {
     return {
-      userLoader: createUserLoader(this.prisma),
-      boardLoader: createBoardLoader(this.prisma),
-      childBoardsLoader: createChildBoardsLoader(this.prisma),
-      postCountLoader: createPostCountLoader(this.prisma),
+      userLoader: createUserLoader(this.userRepository),
+      boardLoader: createBoardLoader(this.boardRepository),
+      childBoardsLoader: createChildBoardsLoader(this.boardRepository),
+      postCountLoader: createPostCountByBoardLoader(this.postRepository),
     };
   }
 }
